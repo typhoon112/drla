@@ -1,0 +1,23 @@
+.cache/
+.conda/
+.pyuser/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+outputs/
+swanlog/
+
+# Large local artifacts: keep code/docs in git, keep weights/data/results out.
+models/
+archive/2026-05-24-legacy-stagebc-artifacts/
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+*.bin
+*.arrow
+*.parquet
+*.npy
+*.npz
+*.log
+*.out

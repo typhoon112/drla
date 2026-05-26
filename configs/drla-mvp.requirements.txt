@@ -1,0 +1,33 @@
+--index-url https://pypi.tuna.tsinghua.edu.cn/simple
+
+# Frozen Qwen condition encoder / tokenizer stack.
+transformers==4.57.6
+accelerate==1.13.0
+datasets==4.8.5
+evaluate==0.4.6
+huggingface-hub[hf-xet]==0.36.2
+hf-xet==1.5.0
+safetensors==0.7.0
+sentencepiece==0.2.1
+peft==0.19.1
+
+# DRLA model/prototype utilities.
+diffusers==0.37.1
+einops==0.8.1
+jsonlines==4.0.0
+orjson==3.11.4
+pyyaml==6.0.3
+tqdm==4.67.1
+rich==13.9.4
+scikit-learn==1.8.0
+pandas==2.3.3
+matplotlib==3.10.8
+seaborn==0.13.2
+sacrebleu==2.5.1
+rouge-score==0.1.2
+tensorboard==2.20.0
+swanlab==0.7.19
+
+# Local development and verification.
+pytest==9.0.3
+ruff==0.15.14

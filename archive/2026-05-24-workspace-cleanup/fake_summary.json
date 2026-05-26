@@ -1,0 +1,35 @@
+{
+  "accuracy": 0.5,
+  "answer_found": 1,
+  "answer_found_rate": 0.5,
+  "config": {
+    "experiment_name": "cola-dlm-gsm8k-baseline",
+    "output_jsonl": "/data1/luyifei/drla/outputs/cola_gsm8k_eval/fake_output.jsonl",
+    "summary_json": "/data1/luyifei/drla/outputs/cola_gsm8k_eval/fake_summary.json",
+    "swanlab_mode": "disabled"
+  },
+  "correct": 1,
+  "created_at": 1779589189,
+  "examples": [
+    {
+      "answer_found": true,
+      "correct": true,
+      "gold": "42",
+      "gold_norm": "42",
+      "id": "ok",
+      "pred_norm": "42",
+      "prediction": "We compute. #### 42"
+    },
+    {
+      "answer_found": false,
+      "correct": false,
+      "gold": "7",
+      "gold_norm": "7",
+      "id": "bad",
+      "pred_norm": null,
+      "prediction": "No answer"
+    }
+  ],
+  "num_samples": 2,
+  "swanlab_run_id": null
+}

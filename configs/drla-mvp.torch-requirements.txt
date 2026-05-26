@@ -1,0 +1,9 @@
+--index-url https://pypi.tuna.tsinghua.edu.cn/simple
+--extra-index-url https://download.pytorch.org/whl/cu128
+
+# RTX 5090 / Blackwell needs CUDA 12.8+ PyTorch wheels.
+# Install configs/drla-mvp.cuda-requirements.txt first so large NVIDIA wheels
+# come from the project mirror instead of the slower NVIDIA host.
+torch==2.11.0+cu128
+torchvision==0.26.0+cu128
+torchaudio==2.11.0+cu128

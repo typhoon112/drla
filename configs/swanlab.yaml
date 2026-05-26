@@ -1,0 +1,41 @@
+project: drla-mvp
+workspace:
+mode: cloud
+logdir: /data1/luyifei/drla/outputs/swanlog
+
+default_tags:
+  - drla
+  - gsm8k
+  - rtx5090
+
+stages:
+  stage-a:
+    group: stage-a-judge
+    job_type: data-eval
+    tags:
+      - judge
+      - normalizer
+  stage-b:
+    group: stage-b-autoencoder
+    job_type: train
+    tags:
+      - reasoning-autoencoder
+      - latent-decoder
+  stage-c:
+    group: stage-c-dit-prior
+    job_type: train
+    tags:
+      - block-causal-dit
+      - closed-loop
+  stage-d:
+    group: stage-d-halt-verifier
+    job_type: train
+    tags:
+      - halt-verifier
+      - adaptive-blocks
+  ablation:
+    group: ablation
+    job_type: eval
+    tags:
+      - ablation
+

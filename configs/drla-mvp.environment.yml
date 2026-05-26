@@ -1,0 +1,6 @@
+name: drla-mvp
+channels:
+  - defaults
+dependencies:
+  - python=3.11
+  - pip

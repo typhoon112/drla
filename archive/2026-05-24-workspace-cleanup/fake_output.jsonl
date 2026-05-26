@@ -1,0 +1,2 @@
+{"id": "ok", "generate": "We compute. #### 42", "ground_truth": "42"}
+{"id": "bad", "generate": "No answer", "ground_truth": "7"}
