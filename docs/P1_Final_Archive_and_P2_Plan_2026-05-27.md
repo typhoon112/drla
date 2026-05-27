@@ -415,28 +415,37 @@ python -m drla.scripts.aggregate_cola_latent_halt_student_subseed_loto \
 只跑 local-only eval 和 aggregation
 ```
 
-2026-05-27 首组已启动并完成 seed66 locked audit：
+2026-05-27 已完成三 seed P1 locked audit v1：
 
 ```text
 model:
-  cross_task_full_b64_bs12_seed66_d64_pma4_trajtok_answer_identity_action_completionrisk_identitystable_20260527
+  cross_task_full_b64_bs12_seed{66,67,68}_d64_pma4_trajtok_answer_identity_action_completionrisk_identitystable_20260527
 split_seed:
   20260601
 eval_root:
-  /data1/luyifei/drla/outputs/cola_latent_halt_student_eval_locked/cross_task_full_b64_bs12_seed66_d64_pma4_trajtok_answer_identity_action_completionrisk_identitystable_split20260601_riskcert_20260527/subseed20260601
+  /data1/luyifei/drla/outputs/cola_latent_halt_student_eval_locked/cross_task_full_b64_bs12_seed{66,67,68}_d64_pma4_trajtok_answer_identity_action_completionrisk_identitystable_split20260601_riskcert_20260527/subseed20260601
 aggregate_summary:
-  /data1/luyifei/drla/outputs/cola_experiment_summaries/official8_full_b64_bs12_p1_locked_seed66_split20260601_riskcert_20260527/summary.json
+  /data1/luyifei/drla/outputs/cola_experiment_summaries/official8_full_b64_bs12_p1_locked_seed66_67_68_split20260601_riskcert_20260527/summary.json
+loss_case_audit:
+  /data1/luyifei/drla/outputs/cola_experiment_summaries/official8_full_b64_bs12_p1_locked_seed66_67_68_split20260601_riskcert_20260527/loss_case_audit.json
 micro:
-  samples = 4980
-  selected_accuracy = 20.763%
-  fixed_final_accuracy = 20.803%
-  avg_blocks = 1.863 / 4
-  losses_vs_final = 2
-  mismatches_vs_final = 23
-  mismatches_vs_prediction_stability = 25
+  folds = 24
+  repeated_samples = 14940
+  selected_accuracy = 20.930%
+  fixed_final_accuracy = 20.950%
+  prediction_stability_accuracy = 20.957%
+  avg_blocks = 1.834 / 4
+  prediction_stability_avg_blocks = 2.501 / 4
+  losses_vs_final = 3
+  losses_vs_prediction_stability = 4
+  mismatches_vs_final = 85
+  mismatches_vs_prediction_stability = 91
+risk_certificate:
+  calibration_joint_risk_satisfied = 21 / 24
+  max_calibration_upper_bound = 0.0838
 ```
 
-这组结果只能作为 locked audit 的第一组证据；不能根据该 locked result 继续改 P1 模型或阈值。
+这组 locked result 不能再反向用于修改 P1 模型或阈值。3 个未满足 certificate target 的 fold 全部是 OBQA：observed loss/mismatch 为 0，但 target-valid 样本太少，Wilson upper bound 仍为 `0.0838`，略高于当前 `0.08` target。主要 loss case 是 LAMBADA `b -> borneo`、SQuAD `1568– -> 1568–1609` 的 prefix boundary，以及 RACE 中 final/policy 为空但 prediction-stability 为 `A` 的 case。结论应写成 observed-low-risk + partially certified，而不是 fully certified safety。
 
 ### P2.1 改进校准与风险控制协议
 

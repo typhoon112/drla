@@ -229,6 +229,14 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
     mismatch_ps = sum(int(row["mismatches_vs_prediction_stability"]) for row in rows)
     loss_final = sum(int(row["losses_vs_final"]) for row in rows)
     mismatch_final = sum(int(row["mismatches_vs_final"]) for row in rows)
+    loss_certified = count_true(rows, "calibration_loss_risk_satisfied")
+    mismatch_certified = count_true(rows, "calibration_mismatch_risk_satisfied")
+    joint_certified = sum(
+        1
+        for row in rows
+        if row.get("calibration_loss_risk_satisfied") is True
+        and row.get("calibration_mismatch_risk_satisfied") is True
+    )
     return {
         "num_eval_summaries": len(rows),
         "num_samples_repeated": int(total),
@@ -256,11 +264,30 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "mismatches_vs_final_total": int(mismatch_final),
         "mismatches_vs_final_rate": rate(mismatch_final, total),
         "selected_avg_blocks_mean_unweighted": statistics.mean(float(row["selected_avg_blocks"]) for row in rows),
+        "calibration_loss_risk_satisfied_count": loss_certified,
+        "calibration_loss_risk_unsatisfied_count": len(rows) - loss_certified,
+        "calibration_mismatch_risk_satisfied_count": mismatch_certified,
+        "calibration_mismatch_risk_unsatisfied_count": len(rows) - mismatch_certified,
+        "calibration_joint_risk_satisfied_count": joint_certified,
+        "calibration_joint_risk_unsatisfied_count": len(rows) - joint_certified,
+        "calibration_loss_upper_max": optional_max(rows, "calibration_loss_upper_max"),
+        "calibration_mismatch_upper_max": optional_max(rows, "calibration_mismatch_upper_max"),
+        "eval_loss_upper_max": optional_max(rows, "eval_loss_upper_max"),
+        "eval_mismatch_upper_max": optional_max(rows, "eval_mismatch_upper_max"),
     }
 
 
 def weighted_mean(rows: list[dict[str, Any]], key: str, total: int) -> float:
     return float(sum(float(row[key]) * int(row["num_samples"]) for row in rows) / total)
+
+
+def count_true(rows: list[dict[str, Any]], key: str) -> int:
+    return sum(1 for row in rows if row.get(key) is True)
+
+
+def optional_max(rows: list[dict[str, Any]], key: str) -> float | None:
+    values = [float(row[key]) for row in rows if row.get(key) is not None]
+    return max(values) if values else None
 
 
 def rate(count: int, total: int) -> float:
@@ -317,6 +344,16 @@ def build_readout(aggregate: dict[str, Any], task_rows: list[dict[str, Any]]) ->
             f"{aggregate['mismatches_vs_prediction_stability_total']} mismatches, "
             f"{aggregate['avg_blocks_micro']:.3f}/4 blocks"
         ),
+        "risk_certificate": {
+            "calibration_joint_risk_satisfied": (
+                f"{aggregate['calibration_joint_risk_satisfied_count']}/"
+                f"{aggregate['num_eval_summaries']}"
+            ),
+            "calibration_loss_upper_max": aggregate.get("calibration_loss_upper_max"),
+            "calibration_mismatch_upper_max": aggregate.get("calibration_mismatch_upper_max"),
+            "eval_loss_upper_max": aggregate.get("eval_loss_upper_max"),
+            "eval_mismatch_upper_max": aggregate.get("eval_mismatch_upper_max"),
+        },
         "loss_tasks": loss_tasks,
     }
 
