@@ -1,22 +1,22 @@
-# P1 Model Comparison Report
+# P1 阶段模型对比报告
 
-Last updated: 2026-05-27
+更新时间：2026-05-27
 
-## Scope
+## 报告范围
 
-This report summarizes the current Phase P1 latent-halt experiments against the official Cola full benchmark traces, the Phase P0 decoder-probed teacher, and the main P1 ablations.
+本文总结当前 Phase P1 latent-halt 实验，并将其与 official Cola full benchmark、Phase P0 decoder-probed teacher、以及主要 P1 消融实验进行对比。
 
-Important evaluation distinction:
+需要先明确三个评估口径：
 
-- **Official Cola scorer**: full prepared-split benchmark scoring over the official 8 tasks. This measures the frozen Cola substrate's final-answer accuracy and is not changed by P1 halt.
-- **P1 halt evaluation**: leave-one-task-out student halt on held-out test partitions with 5 target-calibration subseeds. Accuracy/loss/mismatch are compared against the same-split fixed-final and prediction-stability baselines.
-- **P0 teacher**: decoder-probed/text-stability-supervised readiness/risk policy. It is the teacher and upper-bound diagnostic, not the final latent-only agent communication policy.
+- **Official Cola scorer**：在官方 8 个 benchmark 的 prepared split 上完整跑 4 个 block 后打分。它衡量的是冻结 Cola substrate 的最终答案精度，P1 halt 不改变这个能力。
+- **P1 halt evaluation**：leave-one-task-out 学生早停评估，在 held-out test partition 上用 5 个 target-calibration subseeds 聚合。accuracy、loss、mismatch 都是和同一样本上的 fixed-final / prediction-stability 基线比较。
+- **P0 teacher**：基于 decoder probe、文本稳定性和 scorer 信号得到的 readiness/risk policy。它是 P1 的 teacher 和上界诊断，不是最终 latent-only agent communication policy。
 
 ## Official Cola Full Benchmark
 
-Official Cola full benchmark uses `b64`, `bs12`, seeds `66/67/68`, and the official 8-task scorer.
+Official Cola full benchmark 使用 `b64`、`bs12`、seeds `66/67/68`，并在官方 8-task scorer 上评估。
 
-| Task | Official Cola accuracy, mean +/- std (%) |
+| 任务 | Official Cola accuracy, mean +/- std (%) |
 |---|---:|
 | LAMBADA | 51.867 +/- 0.615 |
 | MMLU | 20.593 +/- 0.314 |
@@ -28,7 +28,7 @@ Official Cola full benchmark uses `b64`, `bs12`, seeds `66/67/68`, and the offic
 | StoryCloze | 28.220 +/- 0.482 |
 | Unweighted task average | 25.070 +/- 0.135 |
 
-Artifact sources:
+数据来源：
 
 ```text
 /data1/luyifei/drla/outputs/cola_official_benchmarks/full_b64_bs12_trace_score_20260524/summary.json
@@ -36,42 +36,42 @@ Artifact sources:
 /data1/luyifei/drla/outputs/cola_official_benchmarks/full_b64_bs12_seed68_trace_score_20260524/summary.json
 ```
 
-## Main P1 Models
+## P1 主要模型
 
-All rows below are full official8, 3 seeds, LOTO-style P1 evaluations unless noted. Losses and mismatches are versus prediction-stability on the same evaluation samples.
+除特别说明外，下表均为 official8 full、3 seeds、LOTO-style P1 evaluation。Losses 和 mismatches 均相对于同一评估样本上的 prediction-stability。
 
-| Model / policy | Online inputs | Accuracy | Blocks | Losses | Mismatches | Interpretation |
+| 模型 / 策略 | 在线输入 | Accuracy | Blocks | Losses | Mismatches | 解释 |
 |---|---|---:|---:|---:|---:|---|
-| P1 baseline `d64_pma4` | latent/process only | 21.556% | 2.048/4 | 58 | 1612 | Learns P0-like signals but unsafe on HellaSwag/SQuAD. |
-| `answer_identity_action + completion_risk` | latent/process only | 22.481% | 1.742/4 | 47 | 617 | Cheaper and lower mismatch than baseline, still too many losses. |
-| `answer_identity_halt + completion_risk` | latent/process only | 22.498% | 1.824/4 | 31 | 699 | Fair target-task strict aggregate; fewer losses than action route, but more blocks and mismatch. |
-| `trajectory_token + action + completion_risk` | latent/process only | 22.492% | 1.711/4 | 41 | 806 | Shows trajectory/delta helps, but not a clean win. |
-| `trajectory_token + action + completion_risk + answer_identity_stability` | latent/process only | 22.528% | 1.812/4 | 4 | 606 | Current best P1 student-only low-loss/cost frontier. |
-| Same as above + hard `contentful>=0.5` | latent/process + calibrated student contentful head | 22.534% | 2.924/4 | 0 | 151 | Safe diagnostic but costlier than prediction-stability. |
-| Same as above + `empty_answer_risk` | latent/process only | 22.508% | 1.829/4 | 24 | 623 | Negative result; converts empty risk into prefix/continuation misses. |
-| Learned action->halt gate v2, cost-limited | scalar P1 heads | 22.534% | 1.859/4 | 10 | 465 | Better mismatch than best student, but more losses. |
-| Learned action->halt gate v2, safety | scalar P1 heads | 22.534% | 2.722/4 | 0 | 130 | Strong safety point, but expensive. |
-| P0 joint-readiness riskcap04 teacher | decoder-probed/text-derived features | 21.596% weighted full split | 2.118/4 | 0 | not same text-mismatch audit | Teacher/upper-bound diagnostic; not decoder-free. |
+| P1 baseline `d64_pma4` | latent/process only | 21.556% | 2.048/4 | 58 | 1612 | 已经学到部分 P0-like 信号，但 HellaSwag/SQuAD 风险较高。 |
+| `answer_identity_action + completion_risk` | latent/process only | 22.481% | 1.742/4 | 47 | 617 | 比 baseline 更便宜、mismatch 更低，但 correctness loss 仍偏多。 |
+| `answer_identity_halt + completion_risk` | latent/process only | 22.498% | 1.824/4 | 31 | 699 | fair target-task strict aggregate；loss 少于 action route，但 block 成本和 mismatch 更高。 |
+| `trajectory_token + action + completion_risk` | latent/process only | 22.492% | 1.711/4 | 41 | 806 | 说明 trajectory/delta 有帮助，但不是干净胜出。 |
+| `trajectory_token + action + completion_risk + answer_identity_stability` | latent/process only | 22.528% | 1.812/4 | 4 | 606 | 当前 P1 student-only 的低 loss / 低成本 frontier 最优点。 |
+| 上一行 + hard `contentful>=0.5` | latent/process + calibrated student contentful head | 22.534% | 2.924/4 | 0 | 151 | 安全诊断点很好，但成本比 prediction-stability 还高，不适合默认策略。 |
+| 上一行 + `empty_answer_risk` | latent/process only | 22.508% | 1.829/4 | 24 | 623 | 负结果；把 empty 风险转移成 prefix/continuation miss。 |
+| Learned action->halt gate v2, cost-limited | scalar P1 heads | 22.534% | 1.859/4 | 10 | 465 | mismatch 低于 best student，但 loss 更多。 |
+| Learned action->halt gate v2, safety | scalar P1 heads | 22.534% | 2.722/4 | 0 | 130 | 很强的 safety reference，但计算成本较高。 |
+| P0 joint-readiness riskcap04 teacher | decoder-probed/text-derived features | 21.596% weighted full split | 2.118/4 | 0 | 非同口径 text-mismatch audit | teacher / upper-bound diagnostic；不是 decoder-free。 |
 
-Best current P1 student-only model:
+当前最优 P1 student-only 模型：
 
 ```text
 trajectory_token + answer_identity_action + completion_risk + answer_identity_stability
 ```
 
-Artifact:
+对应 artifact：
 
 ```text
 /data1/luyifei/drla/outputs/cola_experiment_summaries/official8_full_b64_bs12_p1_trajtok_answer_identity_action_completionrisk_identitystable_boundarypen02_cross_seed_20260527/summary.json
 ```
 
-It reduces losses from `47` to `4` versus the earlier action route while keeping block cost close to the strongest low-cost policies. It does not beat the zero-loss decoder-probed or safety-gated baselines, but it is the best latent/process-only student so far.
+它将早期 action route 的 loss 从 `47` 降到 `4`，同时 block 成本仍接近最强低成本策略。它还没有超过 decoder-probed 或 safety-gated 的零 loss 基线，但已经是当前 latent/process-only student 中最好的点。
 
-## P1 Student Architecture And Training Strategy
+## P1 学生模型架构与训练策略
 
-The P1 student keeps the official Cola VAE/DiT substrate frozen. It does not retrain Cola and does not change the final answer distribution at block 4. The student only learns an online halt/readiness policy over the visible latent block prefix.
+P1 student 保持 official Cola VAE/DiT substrate 冻结。它不重新训练 Cola，也不改变第 4 个 block 的最终答案分布。P1 只学习一个基于当前可见 latent block prefix 的在线 halt/readiness policy。
 
-Current best student:
+当前最优学生模型：
 
 ```text
 LatentHaltStudent-v1
@@ -85,38 +85,38 @@ answer_identity_stability auxiliary head
 boundary penalty 0.2 in target calibration
 ```
 
-Online inputs:
+在线输入：
 
-- visible latent blocks up to the current block;
-- latent norms/deltas/cosine/drift and block-budget features;
-- no decoded answer text, no decoder EOS/im_end probe, and no task scorer result at inference.
+- 当前 block 及之前所有可见 latent blocks；
+- latent norm、delta、cosine、drift，以及 block-budget features；
+- 推理时不输入 decoded answer text，不输入 decoder EOS/im_end probe，也不输入 task scorer result。
 
-Offline teacher labels:
+离线 teacher labels：
 
-- `answer_identity_action`: first block whose decoded/scored answer identity matches the prediction-stability/final reference;
-- `completion_risk`: current decoded answer is empty or a strict prefix/incomplete continuation of the stable/final reference;
-- `answer_identity_stability`: current block answer identity already equals the stable/final reference.
+- `answer_identity_action`：当前 block 第一次 decode/scored answer identity 与 prediction-stability/final reference 一致的位置；
+- `completion_risk`：当前 decoded answer 为空，或是 stable/final reference 的 strict prefix / incomplete continuation；
+- `answer_identity_stability`：当前 block 的 answer identity 已经等于 stable/final reference。
 
-This means P1 is a decoder-supervised latent student: decoder/text signals are used to create labels during training/evaluation, but not as online inputs. This is the intended bridge from P0 teacher to a future decoder-free agent latent-communication policy.
+因此，P1 可以理解为一个 decoder-supervised latent student：训练和评估时使用 decoder/text 信号构造监督标签，但在线推理时不把 decoder/text 当作输入。这正是从 P0 teacher 过渡到未来 decoder-free agent latent communication policy 的中间桥梁。
 
-Training protocol:
+训练协议：
 
-- official 8 tasks: `lambada, mmlu, obqa, hellaswag, race, siqa, squad, story_cloze`;
-- seeds `66/67/68`, leave-one-task-out;
-- all P1 training used CUDA/GPU, SwanLab cloud, local `metrics.jsonl`, `best_checkpoint.pt`, and `last_checkpoint.pt`;
-- best trajectory/identity-stability route used `valid_interval=50`;
-- eval aggregation used local-only SwanLab-disabled scripts because aggregation/eval is not a training run.
+- 官方 8 个任务：`lambada, mmlu, obqa, hellaswag, race, siqa, squad, story_cloze`；
+- seeds `66/67/68`，leave-one-task-out；
+- 所有 P1 training 都使用 CUDA/GPU、SwanLab cloud、本地 `metrics.jsonl`、`best_checkpoint.pt` 和 `last_checkpoint.pt`；
+- 最优 trajectory/identity-stability route 使用 `valid_interval=50`；
+- eval aggregation 使用 local-only、SwanLab disabled，因为它不是训练 run。
 
-## Comparison To Official Cola
+## 与 Official Cola 的对比方式
 
-There are two fair comparisons:
+这里有两个公平比较方式：
 
-1. **Official Cola final-answer accuracy**: run all 4 blocks and score the official prepared benchmark. P1 does not aim to improve this number.
-2. **Same-split halt comparison**: compare P1 selected block against the same sample's fixed-final/prediction-stability answer. This measures whether the student can stop earlier without changing correctness.
+1. **Official Cola final-answer accuracy**：完整跑 4 个 block，再在官方 prepared benchmark 上评分。P1 不以提升这个数字为目标。
+2. **Same-split halt comparison**：在同一样本上比较 P1 selected block 与 fixed-final / prediction-stability answer。它衡量的是学生模型能否更早停下，并尽量不改变 correctness。
 
-The table below is the same-split halt comparison for the best P1 student. It should be read as "how much correctness does P1 preserve while saving blocks", not as a claim that P1 improves Cola's official benchmark accuracy.
+下表是当前最优 P1 student 的 same-split halt comparison。它应该被解读为“P1 在节省 block 的同时保留了多少 correctness”，而不是“P1 提升了 Cola 官方 benchmark 精度”。
 
-| Task | Official Cola full acc mean (%) | P1 same-split fixed acc (%) | P1 selected acc (%) | Delta vs same-split fixed | Blocks saved vs final |
+| 任务 | Official Cola full acc mean (%) | P1 same-split fixed acc (%) | P1 selected acc (%) | 相对 same-split fixed 的变化 | 相对 final 节省 blocks |
 |---|---:|---:|---:|---:|---:|
 | LAMBADA | 51.867 | 53.756 | 53.756 | +0.000 | 0.746 |
 | MMLU | 20.593 | 22.288 | 22.278 | -0.010 | 2.544 |
@@ -127,13 +127,13 @@ The table below is the same-split halt comparison for the best P1 student. It sh
 | SQuAD | 22.450 | 22.907 | 22.894 | -0.013 | 2.136 |
 | StoryCloze | 28.220 | 30.769 | 30.769 | +0.000 | 2.435 |
 
-Because the official full scorer and P1 LOTO repeated-sample protocol are not identical datasets/weightings, the official column is a benchmark anchor, while the fixed-vs-selected delta is the apples-to-apples halt metric. Under that halt metric, the best P1 student loses only `4/73,645 = 0.00543%` repeated samples while saving `2.188` blocks versus final-block decoding and `0.696` blocks versus prediction-stability.
+由于 official full scorer 和 P1 LOTO repeated-sample protocol 的数据划分与样本权重不完全相同，official 列是 benchmark anchor，而 fixed-vs-selected delta 才是同口径 halt 指标。在该 halt 口径下，最佳 P1 student 只损失 `4/73,645 = 0.00543%` repeated samples，同时相对 final-block decoding 平均节省 `2.188` blocks，相对 prediction-stability 平均节省 `0.696` blocks。
 
-## Per-Benchmark P1 Best Model
+## 当前最优 P1 模型逐任务结果
 
-The table below uses the P1 held-out test repeated-sample protocol, not the full official scorer. `Fixed` is the same-split final block accuracy. `PS blocks` is prediction-stability average blocks.
+下表使用 P1 held-out test repeated-sample protocol，不是 full official scorer。`Fixed` 是同一样本上的 final block accuracy。`PS blocks` 是 prediction-stability average blocks。
 
-| Task | P1 best acc (%) | Fixed acc (%) | Blocks | PS blocks | Losses | Mismatches |
+| 任务 | P1 best acc (%) | Fixed acc (%) | Blocks | PS blocks | Losses | Mismatches |
 |---|---:|---:|---:|---:|---:|---:|
 | LAMBADA | 53.756 | 53.756 | 3.254 | 2.018 | 0 | 5 |
 | MMLU | 22.278 | 22.288 | 1.456 | 2.605 | 2 | 7 |
@@ -144,17 +144,17 @@ The table below uses the P1 held-out test repeated-sample protocol, not the full
 | SQuAD | 22.894 | 22.907 | 1.864 | 2.492 | 2 | 494 |
 | StoryCloze | 30.769 | 30.769 | 1.565 | 2.425 | 0 | 2 |
 
-Interpretation:
+解释：
 
-- The best P1 model preserves same-split final accuracy on 6/8 tasks with zero observed losses.
-- Residual correctness losses are only MMLU and SQuAD under this repeated-sample protocol.
-- SQuAD still dominates text-identity mismatch (`494/606`), so the unresolved problem is answer-boundary identity, not benchmark accuracy.
+- 当前最优 P1 模型在 6/8 个任务上没有观察到 correctness loss。
+- 残余 correctness loss 只出现在 MMLU 和 SQuAD。
+- SQuAD 仍贡献了大部分 text-identity mismatch，即 `494/606`。因此当前未解决的核心问题不是 benchmark accuracy，而是 answer-boundary identity。
 
-## P0 Teacher Per-Benchmark Reference
+## P0 Teacher 逐任务参考
 
-P0 joint-readiness riskcap04 is decoder-probed and text-stability-supervised. It uses richer signals than P1 and should be treated as teacher/upper bound, not final deployment policy.
+P0 joint-readiness riskcap04 使用 decoder-probed 和 text-stability-supervised 信号。它的输入比 P1 丰富，因此应被视为 teacher / upper bound，而不是最终部署策略。
 
-| Task | P0 risk-gated acc (%) | Fixed acc (%) | P0 blocks | PS blocks | Losses |
+| 任务 | P0 risk-gated acc (%) | Fixed acc (%) | P0 blocks | PS blocks | Losses |
 |---|---:|---:|---:|---:|---:|
 | LAMBADA | 51.866 | 51.866 | 1.670 | 2.015 | 0 |
 | MMLU | 20.598 | 20.593 | 2.616 | 2.620 | 0 |
@@ -165,49 +165,49 @@ P0 joint-readiness riskcap04 is decoder-probed and text-stability-supervised. It
 | SQuAD | 22.453 | 22.450 | 1.865 | 2.504 | 0 |
 | StoryCloze | 28.220 | 28.220 | 1.486 | 2.439 | 0 |
 
-P1 has learned substantial P0 structure: it reaches similar cost on SQuAD (`1.864` vs P0 `1.865`) and cheaper cost on many multiple-choice tasks, while using only latent/process online inputs. But P0 still has zero observed losses because it is allowed to use decoder/text-derived features.
+P1 已经学到相当多的 P0 结构：例如 SQuAD 上 P1 blocks 为 `1.864`，几乎等于 P0 的 `1.865`；很多多选任务上 P1 还更便宜。但 P0 仍能做到 zero observed loss，因为它允许使用 decoder/text-derived features。
 
-## Main Ablation Conclusions
+## 主要消融结论
 
-### Architecture
+### 架构消融
 
-| Ablation | Result | Conclusion |
+| 消融项 | 结果 | 结论 |
 |---|---|---|
-| `all_tokens` pooling | 2 losses / 17 mismatches / 3.979 blocks on seed68 | Too conservative; not a useful default. |
-| `pma1` | 5 losses / 315 mismatches / 2.793 blocks on seed68 | Single PMA query over-compresses evidence. |
-| `mean_max` | 4 losses / 115 mismatches / 2.837 blocks on seed68 | Reduces mismatch but costlier than baseline. |
-| `d128_pma4` | 4 losses / 285 mismatches / 2.432 blocks on seed68 | Blind capacity increase is not the lever. |
-| `d32_pma4` | 27 losses / 263 mismatches / 2.126 blocks on seed68 | Smaller width is cheaper but unsafe. |
-| `no_block_budget` | 8 losses / 389 mismatches / 1.831 blocks on seed68 | Block/budget features are still important calibration anchors. |
-| `film` process interaction | 8 losses / 190 mismatches / 2.260 blocks on seed68 | Simple FiLM does not replace process/trajectory tokens. |
-| `trajectory_token` | 41 losses / 806 mismatches / 1.711 blocks cross-seed | Positive architecture signal, but needs better identity objective. |
+| `all_tokens` pooling | seed68 上 2 losses / 17 mismatches / 3.979 blocks | 太保守，不适合作为默认策略。 |
+| `pma1` | seed68 上 5 losses / 315 mismatches / 2.793 blocks | 单个 PMA query 对 evidence 压缩过强。 |
+| `mean_max` | seed68 上 4 losses / 115 mismatches / 2.837 blocks | mismatch 较低，但 block 成本偏高。 |
+| `d128_pma4` | seed68 上 4 losses / 285 mismatches / 2.432 blocks | 单纯扩容不是关键杠杆。 |
+| `d32_pma4` | seed68 上 27 losses / 263 mismatches / 2.126 blocks | 更便宜，但明显不安全。 |
+| `no_block_budget` | seed68 上 8 losses / 389 mismatches / 1.831 blocks | block/budget features 仍是重要 calibration anchor。 |
+| `film` process interaction | seed68 上 8 losses / 190 mismatches / 2.260 blocks | 简单 FiLM 不能替代 process/trajectory tokens。 |
+| `trajectory_token` | cross-seed 41 losses / 806 mismatches / 1.711 blocks | trajectory/delta 是正向信号，但需要更好的 identity objective。 |
 
-### Objectives and Calibration
+### 目标函数与校准消融
 
-| Ablation | Result | Conclusion |
+| 消融项 | 结果 | 结论 |
 |---|---|---|
-| `answer_identity_action + completion_risk` | 47 losses / 617 mismatches / 1.742 blocks | Good low-cost route, still unsafe. |
-| `answer_identity_halt + completion_risk` | 31 losses / 699 mismatches / 1.824 blocks | Fewer losses than action route, but costs more blocks and mismatch. |
-| `answer_identity_stability` head | 4 losses / 606 mismatches / 1.812 blocks | Best P1 student-only point. |
-| Hard `contentful>=0.5` | 0 losses / 151 mismatches / 2.924 blocks | Useful diagnostic, too expensive. |
-| `empty_answer_risk` head | 24 losses / 623 mismatches / 1.829 blocks | Negative transfer/proxy mismatch. |
-| Wilson risk control on current sweeps | strict targets select 0 complete folds | Current calibration size/scores cannot certify low risk. |
+| `answer_identity_action + completion_risk` | 47 losses / 617 mismatches / 1.742 blocks | 低成本方向有效，但仍不够安全。 |
+| `answer_identity_halt + completion_risk` | 31 losses / 699 mismatches / 1.824 blocks | loss 少于 action route，但 block 和 mismatch 更高。 |
+| `answer_identity_stability` head | 4 losses / 606 mismatches / 1.812 blocks | 当前 P1 student-only 最优点。 |
+| Hard `contentful>=0.5` | 0 losses / 151 mismatches / 2.924 blocks | 很有价值的安全诊断，但太贵。 |
+| `empty_answer_risk` head | 24 losses / 623 mismatches / 1.829 blocks | 负迁移 / proxy mismatch，不应继续简单堆二分类辅助头。 |
+| Wilson risk control on current sweeps | strict targets 下 0 个 complete folds 被选中 | 当前 calibration size / scores 还不能认证低风险。 |
 
-## Paper-Level Takeaway
+## Paper 级别结论
 
-1. **Cola accuracy is not improved by P1, and that is not the goal.** The official frozen Cola full-benchmark task average remains about `25.07%`. P1 changes when to stop, not what final answer Cola can produce.
-2. **P1 learns meaningful P0 signals.** The best latent/process-only student reaches `1.812/4` blocks with only `4/73,645` repeated-sample losses against prediction-stability.
-3. **P0 remains the safety upper bound.** P0 riskcap04 gets zero observed losses at `2.118/4` blocks but depends on decoder/text features, so it is not the final agent latent-communication policy.
-4. **The main unresolved risk is answer identity boundary.** SQuAD mismatch and prefix/continuation cases dominate; adding narrow heads such as `empty_answer_risk` is not sufficient.
-5. **Best current scientific statement:** P1 has learned enough of P0's decoder-probed readiness signal to support the latent-student route, but final deployment still needs stronger answer-identity risk modeling or a more rigorous calibration/risk-control protocol.
+1. **P1 没有提升 Cola 官方 benchmark accuracy，也不应该把这作为目标。** 冻结 Official Cola 的 full-benchmark task average 约为 `25.07%`。P1 改变的是何时停止，而不是 Cola 最终能生成什么答案。
+2. **P1 确实学到了有意义的 P0 readiness 信号。** 最佳 latent/process-only student 在 `1.812/4` blocks 下，只产生 `4/73,645` repeated-sample losses。
+3. **P0 仍是安全上界。** P0 riskcap04 在 `2.118/4` blocks 下 zero observed loss，但依赖 decoder/text features，因此不能直接作为最终 agent latent-communication policy。
+4. **当前主要风险是 answer identity boundary。** SQuAD mismatch 和 prefix/continuation case 占主导；简单添加 `empty_answer_risk` 这种窄二分类 head 不够。
+5. **当前最稳妥的科学表述是：** P1 已经充分学习到了 P0 decoder-probed readiness signal，足以支持继续走 latent-student 路线；但最终部署前仍需要更强的 answer-identity risk modeling，或更严格的 calibration / risk-control protocol。
 
-## Recommended Stopping Point For P1
+## P1 阶段推荐停止点
 
-For paper/reporting, use these as the P1 headline models:
+如果用于论文或阶段报告，建议把以下几个模型作为 P1 headline：
 
-1. `trajectory_token + answer_identity_action + completion_risk + answer_identity_stability` as the best latent/process-only student.
-2. P0 joint-readiness riskcap04 as the decoder-probed teacher/upper bound.
-3. Learned action->halt gate v2 safety as an additional safety-cost reference.
-4. `empty_answer_risk` as a negative auxiliary-head ablation.
+1. `trajectory_token + answer_identity_action + completion_risk + answer_identity_stability`：最佳 latent/process-only student。
+2. P0 joint-readiness riskcap04：decoder-probed teacher / upper bound。
+3. Learned action->halt gate v2 safety：额外的 safety-cost reference。
+4. `empty_answer_risk`：负消融，用来说明继续堆窄二分类 auxiliary head 不是正确方向。
 
-Do not present P1 as improving official Cola benchmark accuracy. Present it as reducing latent block budget while approximately preserving final-answer correctness under a student-only online-input policy.
+不要把 P1 表述为提升 official Cola benchmark accuracy。更准确的表述是：P1 在 student-only online-input policy 下，显著减少 latent block budget，同时近似保持 final-answer correctness。
