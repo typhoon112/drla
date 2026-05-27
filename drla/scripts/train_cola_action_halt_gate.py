@@ -34,8 +34,10 @@ from drla.scripts.train_cola_readiness_model import (
     OFFICIAL_COLA_TASKS,
     binary_auprc,
     binary_auroc,
+    device_metadata,
     parse_tasks,
     pos_weight,
+    require_cuda_training,
     resolve_device,
 )
 from drla.tracking import finish_experiment, init_experiment, log_metrics
@@ -225,6 +227,8 @@ def train_action_halt_gate(config: ActionHaltGateTrainConfig) -> dict[str, Any]:
         return summary
 
     device = resolve_device(config.device)
+    require_cuda_training(device, "train_cola_action_halt_gate.py")
+    device_info = device_metadata(device)
     if config.objective == "binary_bce":
         train_dataset = TensorDataset(train_x, train_bundle["y"])
     elif config.objective == "cost_weighted_bce":
@@ -277,6 +281,7 @@ def train_action_halt_gate(config: ActionHaltGateTrainConfig) -> dict[str, Any]:
         description="Rare-event latent-student action-to-halt gate trained without decoder inference inputs.",
         config={
             **asdict(config),
+            "device_info": device_info,
             "feature_names": FEATURE_NAMES,
             "data_summary": data_summary,
             "online_input_policy": online_input_policy(),
@@ -512,6 +517,7 @@ def train_action_halt_gate(config: ActionHaltGateTrainConfig) -> dict[str, Any]:
         summary = {
             "created_at": int(time.time()),
             "config": asdict(config),
+            "device_info": device_info,
             "feature_names": FEATURE_NAMES,
             "policy_score_semantics": policy_score_semantics(config),
             "online_input_policy": online_input_policy(),

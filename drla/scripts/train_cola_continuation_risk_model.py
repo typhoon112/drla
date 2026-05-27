@@ -33,6 +33,8 @@ from drla.scripts.train_cola_readiness_model import (
     load_training_rows,
     parse_tasks,
     pos_weight,
+    device_metadata,
+    require_cuda_training,
     resolve_device,
     stable_uniform,
 )
@@ -155,6 +157,8 @@ def train_continuation_risk_model(config: ContinuationRiskTrainConfig) -> dict[s
     train_data, valid_data, test_data, norm_stats = make_split_datasets(tensors, splits)
 
     device = resolve_device(config.device)
+    require_cuda_training(device, "train_cola_continuation_risk_model.py")
+    device_info = device_metadata(device)
     model = ContinuationRiskModel(
         feature_dim=train_data.tensors[0].shape[1],
         task_dim=train_data.tensors[1].shape[1],
@@ -180,6 +184,7 @@ def train_continuation_risk_model(config: ContinuationRiskTrainConfig) -> dict[s
         description="Non-gold continuation/prefix-risk model for Cola halt calibration.",
         config={
             **asdict(config),
+            "device_info": device_info,
             "feature_fields": RISK_FEATURE_FIELDS,
             "target_mode": config.target_mode,
             "num_rows": len(rows),
@@ -274,6 +279,7 @@ def train_continuation_risk_model(config: ContinuationRiskTrainConfig) -> dict[s
         summary = {
             "created_at": int(time.time()),
             "config": asdict(config),
+            "device_info": device_info,
             "feature_fields": metadata["feature_fields"],
             "signal_mode": config.signal_mode,
             "target_mode": config.target_mode,

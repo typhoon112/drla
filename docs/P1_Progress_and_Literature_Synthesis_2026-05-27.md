@@ -221,9 +221,9 @@ Race 已启动但在数据构造/训练前被中断，未形成有效训练结�
 3. `policy_cost_limited` 的阈值选择仍只看当前 sweep 排序，没有显式校准 head probability，也没有 per-task reliability / calibration error 约束。
 4. 在 test_positive_rate 为 0 的任务上，source-valid cost 容易学成过度 defer；在 LAMBADA 这类有 rescue 的任务上，tight-cost 反而漏掉更多关键 rescue。
 
-## 7. 当前决策
+## 7. 当时决策与后续复核
 
-不要扩展当前 `decomposed_expected_utility` 到 official8 全量。下一步应先修正 selector / calibration，而不是再添加一个 head 或继续扫 learning rate。优先候选：
+四任务 partial 后的当时判断是：不要直接把原始 `decomposed_expected_utility` 当成主线扩展到 official8 全量，应先修正 selector / calibration，而不是再添加一个 head 或继续扫 learning rate。优先候选：
 
 1. 保留五个 decomposed heads，但训练后单独做 validation calibration：
    - 校准每个 head 的 reliability。
@@ -233,6 +233,8 @@ Race 已启动但在数据构造/训练前被中断，未形成有效训练结�
    - 第一层只处理 correctness rescue / harm。
    - 第二层在 correctness-safe frontier 内处理 text/answer-stability mismatch cleanup。
 3. 回到 richer latent/process interaction，而不是继续只在 11 个 action-student scalar heads 上做 gate；当前 scalar heads 可能已经丢掉了 answer-boundary 的局部结构。
+
+用户随后要求补齐数据，不做 partial 妥协。因此本轮继续补跑剩余 held-out tasks，并用相同 local-only 校准脚本做 full official8 复核；结论见第 9 节。
 
 ## 8. Post-hoc 校准复查
 
@@ -298,3 +300,38 @@ Source-valid 与 held-out test 的事件分布漂移很明显：例如 MMLU sour
 1. 补跑 RACE/SIQA/SQuAD/StoryCloze 的 `decomposed_expected_utility` formal runs，必须 SwanLab cloud + CUDA。
 2. 用同一个 local-only calibration script 重新聚合 official8，比较 pooled、constrained、task-robust 与 old v2。
 3. 若 task-robust 在 official8 仍成立，再把 risk-controlled calibration 正式纳入主线；否则转向更丰富 latent/process interaction，不再继续扫 selector。
+
+## 9. Full Official8 补齐结果
+
+补跑的剩余 held-out tasks 均使用 SwanLab cloud、`valid_interval=50`、`best_checkpoint.pt` 和 `last_checkpoint.pt`：
+
+- RACE: `77amuogees617ovgiycmn`
+- SIQA: `tdng7woa0awf4m4j0tp12`
+- SQuAD: `qs2beb5h1rj6uo2b7q4kk`
+- Story Cloze: `buwt1lx9we4ez2lzcbnfl`
+
+Full official8 local-only calibration artifact:
+
+```text
+/data1/luyifei/drla/outputs/cola_experiment_summaries/official8_full_b64_bs12_p1_decomposed_expectedutility_calibrated_official8_seed20260527/summary.json
+```
+
+与 old v2 backfilled aggregate 的同口径对比：
+
+| Policy | old v2 losses / mismatches / blocks | decomposed official8 losses / mismatches / blocks | 结论 |
+|---|---:|---:|---|
+| action | `47 / 612 / 1.742` | `47 / 612 / 1.742` | 同一 action baseline |
+| source-valid cost-limited | `10 / 465 / 1.859` | `11 / 493 / 1.847` | 新模型更便宜 `0.012` block，但多 `1` loss 和 `28` mismatches |
+| source-valid constrained cost-limited | n/a | `11 / 465 / 1.857` | mismatch 追平 v2，但仍多 `1` loss，block 只省 `0.002` |
+| source-valid task-robust cost-limited | n/a | `11 / 482 / 1.848` | 四任务优势没有扩展到 full official8 |
+| source-valid task-robust constrained cost-limited | n/a | `11 / 495 / 1.843` | 更便宜但 mismatch 更差 |
+| source-valid safety | full accuracy, `130` mismatches, `2.722` | full accuracy, `140` mismatches, `2.658` | 同 accuracy 下省 block，但 mismatch 稍差 |
+| best-test gate by loss | full accuracy, `130` mismatches, `2.501` | full accuracy, `130` mismatches, `2.366` | test-only 上界更便宜，不可作为 deployable 选择 |
+
+复核结论：
+
+1. 四任务 source-task-robust 的改善没有在 official8 成立，不能把它提升为主线。
+2. Decomposed heads 仍然有诊断价值：它们能分开看 correctness rescue、mismatch cleanup、introduced harm 和 cost，帮助解释为什么 selector 会过度 defer 或漏救。
+3. 当前瓶颈不只是 threshold selector，而是 action-student 11 个 scalar heads 的信息不足与跨任务概率校准不可靠。继续扫 utility weights / threshold grids 很可能只是在 loss、mismatch、blocks 之间搬动误差。
+4. 下一步应该回到 richer latent/process interaction 或 formal risk-control objective：让模型直接看更丰富的 latent trajectory / block-local evidence，并把 risk constraint 明确放进训练或校准协议，而不是只在 frozen scalar heads 上做后处理。
+5. 关于“为什么看起来像 CPU”：训练脚本解析到 CUDA 后模型参数和 batch 会放到 GPU；但 action->halt gate 只有 11 维输入、hidden=64，GPU 计算量很小，CPU 侧数据、SwanLab logging、valid 和 threshold sweep 会占主要时间。为避免误用，训练脚本已增加 CUDA fail-fast：非 dry-run 训练若解析到 CPU 会直接报错，并在新 summary/SwanLab config 中写入 resolved device。

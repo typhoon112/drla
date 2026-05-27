@@ -33,9 +33,11 @@ from drla.scripts.train_cola_readiness_model import (
     add_derived_stability_features,
     binary_auprc,
     binary_auroc,
+    device_metadata,
     load_training_rows,
     parse_tasks,
     pos_weight,
+    require_cuda_training,
     resolve_device,
     safe_float,
     stable_uniform,
@@ -410,6 +412,8 @@ def train_latent_halt_student(config: LatentHaltStudentTrainConfig) -> dict[str,
     binary_targets = binary_targets_for_config(config)
 
     device = resolve_device(config.device)
+    require_cuda_training(device, "train_cola_latent_halt_student.py")
+    device_info = device_metadata(device)
     model = LatentHaltStudent(
         latent_dim=tensors["latent_blocks"].shape[-1],
         process_dim=tensors["process_features"].shape[-1],
@@ -450,6 +454,7 @@ def train_latent_halt_student(config: LatentHaltStudentTrainConfig) -> dict[str,
         description="LatentHaltStudent-v1 decoder-as-teacher halt model with latent/process-only online inputs.",
         config={
             **asdict(config),
+            "device_info": device_info,
             "process_feature_fields": metadata["process_feature_fields"],
             "binary_targets": binary_targets,
             "teacher_targets": metadata["teacher_targets"],
@@ -546,6 +551,7 @@ def train_latent_halt_student(config: LatentHaltStudentTrainConfig) -> dict[str,
         summary = {
             "created_at": int(time.time()),
             "config": asdict(config),
+            "device_info": device_info,
             "process_feature_fields": metadata["process_feature_fields"],
             "binary_targets": binary_targets,
             "teacher_targets": metadata["teacher_targets"],

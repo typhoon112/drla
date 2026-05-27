@@ -157,6 +157,8 @@ def train_readiness_model(config: ReadinessTrainConfig) -> dict[str, Any]:
     train_data, valid_data, test_data, norm_stats = make_split_datasets(tensors, splits)
 
     device = resolve_device(config.device)
+    require_cuda_training(device, "train_cola_readiness_model.py")
+    device_info = device_metadata(device)
     model = ReadinessModel(
         latent_dim=train_data.tensors[0].shape[1],
         feature_dim=train_data.tensors[1].shape[1],
@@ -185,6 +187,7 @@ def train_readiness_model(config: ReadinessTrainConfig) -> dict[str, Any]:
         description="Multi-signal readiness/halt model over official Cola block traces.",
         config={
             **asdict(config),
+            "device_info": device_info,
             "feature_fields": FEATURE_FIELDS,
             "signal_mode": config.signal_mode,
             "num_rows": len(rows),
@@ -281,6 +284,7 @@ def train_readiness_model(config: ReadinessTrainConfig) -> dict[str, Any]:
         summary = {
             "created_at": int(time.time()),
             "config": asdict(config),
+            "device_info": device_info,
             "feature_fields": metadata["feature_fields"],
             "signal_mode": config.signal_mode,
             "num_rows": len(rows),
@@ -714,6 +718,26 @@ def resolve_device(device_arg: str) -> torch.device:
     if device_arg == "auto":
         return torch.device("cuda" if torch.cuda.is_available() else "cpu")
     return torch.device(device_arg)
+
+
+def require_cuda_training(device: torch.device, script_name: str) -> None:
+    if device.type != "cuda":
+        raise RuntimeError(
+            f"{script_name} is a deep-learning training script and must run on CUDA/GPU; "
+            f"resolved device is {device}. Pass --device cuda or fix the CUDA environment."
+        )
+
+
+def device_metadata(device: torch.device) -> dict[str, Any]:
+    metadata: dict[str, Any] = {
+        "requested_resolved_device": str(device),
+        "device_type": device.type,
+    }
+    if device.type == "cuda":
+        index = device.index if device.index is not None else torch.cuda.current_device()
+        metadata["cuda_device_index"] = int(index)
+        metadata["cuda_device_name"] = torch.cuda.get_device_name(index)
+    return metadata
 
 
 def parse_args() -> ReadinessTrainConfig:
