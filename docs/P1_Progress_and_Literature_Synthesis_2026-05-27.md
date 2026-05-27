@@ -443,3 +443,123 @@ pooled tokens + trajectory token -> causal inter-block Transformer -> multi-head
 - 不应把 `trajectory_token` 直接设为默认主线；它应作为下一代学生模型的组件候选。
 - 更合理的下一步是训练 trajectory-level answer identity/stability objective：让模型显式预测“当前 answer identity 是否会被后续 block 改写/补全”，而不是只用 action label + completion head 间接表达。
 - 另一路是扩大或重设 calibration 数据协议，否则 formal risk-control 仍会因为 finite valid size 无法认证低 loss 风险。
+
+## 12. Trajectory-Level Answer Identity/Stability Teacher
+
+上一节的结论已经被本轮实验直接验证：只给 trajectory token 加 action/completion 目标，会更早停但更容易改写 answer identity；因此这次把 decoder-as-teacher 信号改成更贴近最终需求的中间目标。
+
+### 12.1 设计依据
+
+这个目标不是把 decoder 信号拿来做在线特征，而是把训练好的 decoder 当成离线 teacher：P1 student 在线仍然只能看当前 prefix 内的 latent blocks 和 latent/process features，但训练时学习一个“当前 latent prefix 是否已经编码出稳定 answer identity”的轻量读出器。
+
+这和几篇相关工作的可借鉴点是一致的：
+
+- Coconut 说明 continuous thought 的有效性要看状态轨迹如何从探索走向可答状态，不能只看单点 latent。
+- CODI 支持用 teacher hidden/state 或输出侧监督蒸馏连续空间中的推理状态。
+- CoLaR 的 dynamic termination / latent compression 提醒我们，halt 目标应是 answer-state readiness 与 cost 的共同建模。
+- Latent space survey 的风险提示是：latent 可控性与可评估性必须通过 probe、teacher label、calibration audit 和失败样本解释闭环确认，不能靠小实验正负结果下结论。
+
+### 12.2 实现
+
+新增训练开关：
+
+```text
+--use-answer-identity-stability
+--selection-metric readiness_prediction_change_completion_identity_mean_auroc
+```
+
+新增 target：
+
+```text
+answer_identity_stability = 1
+iff current scored_prediction == rollout prediction-stability / final reference
+```
+
+这意味着 student 学到的不是“是否正确”，而是“当前 block 的 answer identity 是否已经稳定到未来不会被补全或改写”。它仍然是 decoder/text-derived teacher target；不能把 `scored_prediction`、prediction-stability、final answer 或 official correctness 作为在线输入。
+
+模型结构沿用上一轮：
+
+```text
+latent slots
+-> slot adapter + intra-block attention + PMA4 + last-slot
+-> trajectory token from pooled state + previous-block delta + process state
+-> causal inter-block Transformer
+-> multi-head readout
+```
+
+### 12.3 完整实验协议
+
+- 任务：official8 full leave-one-task-out。
+- Seeds：`66, 67, 68`。
+- 训练数：`24` 个正式训练。
+- 训练约束：全部 CUDA/GPU + SwanLab cloud，`valid_interval=50`，写 `metrics.jsonl`、`best_checkpoint.pt`、`last_checkpoint.pt`。
+- Eval：`120` 个 local-only eval，target-task valid calibration，cap128，5 个 calibration subseeds，boundary-risk penalty `0.2`。
+
+Artifacts:
+
+```text
+training roots:
+/data1/luyifei/drla/outputs/cola_latent_halt_student_ablation/cross_task_full_b64_bs12_seed{66,67,68}_d64_pma4_trajtok_answer_identity_action_completionrisk_identitystable_20260527
+
+eval roots:
+/data1/luyifei/drla/outputs/cola_latent_halt_student_eval_ablation/cross_task_full_b64_bs12_seed{66,67,68}_d64_pma4_trajtok_answer_identity_action_completionrisk_identitystable_targetcal_cap128_boundarypen02_subseeds_20260527
+
+aggregate:
+/data1/luyifei/drla/outputs/cola_experiment_summaries/official8_full_b64_bs12_p1_trajtok_answer_identity_action_completionrisk_identitystable_boundarypen02_cross_seed_20260527/summary.json
+```
+
+### 12.4 结果
+
+| Route | Losses | Mismatches | Blocks | 结论 |
+|---|---:|---:|---:|---|
+| old `answer_identity_action + completion_risk` | `47` | `617` | `1.742/4` | 旧 action route |
+| `trajectory_token + answer_identity_action + completion_risk` | `41` | `806` | `1.711/4` | 便宜但 mismatch 更差 |
+| learned action->halt v2 cost-limited | `10` | `465` | `1.859/4` | mismatch 更低但 loss 更多 |
+| new identity-stability trajectory student | `4` | `606` | `1.812/4` | 当前 P1 student-only 低 loss/cost 最好点 |
+| v2 safety | `0` | `130` | `2.722/4` | 更安全但明显更贵 |
+
+Task-level repeated-sample loss 分布：
+
+| Task | Losses | Mismatches | Avg blocks |
+|---|---:|---:|---:|
+| LAMBADA | `0` | `5` | `3.254` |
+| MMLU | `2` | `7` | `1.456` |
+| OBQA | `0` | `0` | `1.209` |
+| HellaSwag | `0` | `93` | `1.799` |
+| RACE | `0` | `5` | `1.583` |
+| SIQA | `0` | `0` | `1.337` |
+| SQuAD | `2` | `494` | `1.864` |
+| StoryCloze | `0` | `2` | `1.565` |
+
+4 个 repeated losses 实际对应 2 个 unique boundary misses：
+
+- seed67 SQuAD：block1 为空答案，future/final 为 `1873`。
+- seed68 MMLU：block1 为空答案，future/final 为 `C`。
+
+这说明新 head 把大部分 prefix/completion 风险压住了，但低阈值 calibration 仍会放过空答案边界。
+
+### 12.5 诊断和边界
+
+额外 local-only 诊断：
+
+```text
+hard contentful>=0.5 gate:
+/data1/luyifei/drla/outputs/cola_experiment_summaries/official8_full_b64_bs12_p1_trajtok_answer_identity_action_completionrisk_identitystable_contentful05_boundarypen02_cross_seed_20260527/summary.json
+```
+
+结果为 `0` losses / `151` mismatches / `2.924/4` blocks。它证明 residual risk 主要是 empty-answer boundary，但这个 guard 比 prediction-stability 还贵，不应作为默认路线。
+
+Formal risk-control 仍失败：
+
+```text
+/data1/luyifei/drla/outputs/cola_experiment_summaries/official8_full_b64_bs12_p1_trajtok_answer_identity_action_completionrisk_identitystable_wilson_risk_control_20260527/summary.json
+```
+
+Wilson loss targets `<=0.00025/0.0005/0.001/0.002` 都选不出完整 `120/120` folds。结论是：answer identity/stability 是有效 teacher signal，但当前 valid calibration size 与 score 排序还不足以给严格低风险认证。
+
+### 12.6 当前判断
+
+1. 新结果是 P1 student-only 的实质进展，不是 smoke test。
+2. 它支持“用 decoder 训练轻量 early-stop decoder/proxy，再在线只读 latent”的路线。
+3. 它还不是最终 agent latent communication 答案，因为训练 label 仍来自 decoder/text teacher，且 calibration 仍靠离线阈值搜索。
+4. 下一步应集中处理 empty-answer boundary、text-identity mismatch 和 formal calibration，而不是继续做小的 scalar threshold sweep。

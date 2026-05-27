@@ -98,6 +98,8 @@ def binary_targets_for_config(config: "LatentHaltStudentTrainConfig") -> list[st
         targets.append("empty_answer_risk")
     if config.use_answer_format_risk:
         targets.append("answer_format_risk")
+    if config.use_answer_identity_stability:
+        targets.append("answer_identity_stability")
     return targets
 
 
@@ -111,6 +113,7 @@ def binary_target_tensor_names(config: "LatentHaltStudentTrainConfig") -> list[s
         "completion_risk": "y_completion_risk",
         "empty_answer_risk": "y_empty_answer_risk",
         "answer_format_risk": "y_answer_format_risk",
+        "answer_identity_stability": "y_answer_identity_stability",
     }
     return [tensor_names[name] for name in binary_targets_for_config(config)]
 
@@ -148,10 +151,12 @@ class LatentHaltStudentTrainConfig:
     completion_risk_loss_weight: float = 0.75
     empty_answer_risk_loss_weight: float = 0.75
     answer_format_risk_loss_weight: float = 0.75
+    answer_identity_stability_loss_weight: float = 0.75
     future_gain_loss_weight: float = 0.25
     use_completion_risk: bool = False
     use_empty_answer_risk: bool = False
     use_answer_format_risk: bool = False
+    use_answer_identity_stability: bool = False
     readiness_target_mode: str = "oracle_frontier"
     teacher_decisions_jsonl: str = ""
     selection_metric: str = "readiness_auroc"
@@ -636,6 +641,7 @@ def validate_config(config: LatentHaltStudentTrainConfig) -> None:
         "readiness_prediction_change_completion_contentful_mean_auroc",
         "readiness_prediction_change_completion_empty_mean_auroc",
         "readiness_prediction_change_completion_format_mean_auroc",
+        "readiness_prediction_change_completion_identity_mean_auroc",
     }:
         raise ValueError("unknown selection_metric")
     for name, value in {
@@ -647,6 +653,7 @@ def validate_config(config: LatentHaltStudentTrainConfig) -> None:
         "completion_risk_loss_weight": config.completion_risk_loss_weight,
         "empty_answer_risk_loss_weight": config.empty_answer_risk_loss_weight,
         "answer_format_risk_loss_weight": config.answer_format_risk_loss_weight,
+        "answer_identity_stability_loss_weight": config.answer_identity_stability_loss_weight,
         "future_gain_loss_weight": config.future_gain_loss_weight,
     }.items():
         if value < 0:
@@ -700,6 +707,7 @@ def build_student_tensors(
     y_completion_risk = torch.zeros(row_count, dtype=torch.float32)
     y_empty_answer_risk = torch.zeros(row_count, dtype=torch.float32)
     y_answer_format_risk = torch.zeros(row_count, dtype=torch.float32)
+    y_answer_identity_stability = torch.zeros(row_count, dtype=torch.float32)
     sample_keys: list[str] = []
 
     latent_cache: dict[str, torch.Tensor] = {}
@@ -746,6 +754,7 @@ def build_student_tensors(
                 y_ready[write_idx] = float(int(row["block_number"]) == answer_identity_block)
             else:
                 y_ready[write_idx] = float(row.get("is_at_or_after_oracle_frontier", False))
+            y_answer_identity_stability[write_idx] = float(int(row["block_number"]) >= answer_identity_block)
             y_correct[write_idx] = float(row.get("official_correct", False))
             y_future[write_idx] = float(row.get("future_gain_correct", 0.0))
             prediction = normalize_text(row.get("scored_prediction"))
@@ -778,6 +787,7 @@ def build_student_tensors(
         "y_completion_risk": y_completion_risk,
         "y_empty_answer_risk": y_empty_answer_risk,
         "y_answer_format_risk": y_answer_format_risk,
+        "y_answer_identity_stability": y_answer_identity_stability,
     }
     metadata = {
         "sample_keys": sample_keys,
@@ -796,6 +806,10 @@ def build_student_tensors(
             ),
             "empty_answer_risk": "current task-scored prediction is empty; offline decoder teacher only",
             "answer_format_risk": "choice-task scored prediction is not a single A-E option; offline decoder teacher only",
+            "answer_identity_stability": (
+                "at or after the first block whose scored_prediction matches the prediction-stability/final "
+                "reference; dense trajectory-level offline decoder/text teacher only"
+            ),
         },
         "online_input_policy": (
             f"raw latent prefixes, block mask, selected process features ({config.process_feature_mode}), "
@@ -1108,6 +1122,11 @@ def select_metric(metrics: dict[str, float], selection_metric: str) -> float:
             metrics,
             ["readiness_auroc", "prediction_change_auroc", "completion_risk_auroc", "answer_format_risk_auroc"],
         )
+    elif selection_metric == "readiness_prediction_change_completion_identity_mean_auroc":
+        value = mean_metric(
+            metrics,
+            ["readiness_auroc", "prediction_change_auroc", "completion_risk_auroc", "answer_identity_stability_auroc"],
+        )
     else:
         value = metrics.get(selection_metric, float("nan"))
     if math.isnan(value):
@@ -1208,10 +1227,16 @@ def parse_args() -> LatentHaltStudentTrainConfig:
         type=float,
         default=LatentHaltStudentTrainConfig.answer_format_risk_loss_weight,
     )
+    parser.add_argument(
+        "--answer-identity-stability-loss-weight",
+        type=float,
+        default=LatentHaltStudentTrainConfig.answer_identity_stability_loss_weight,
+    )
     parser.add_argument("--future-gain-loss-weight", type=float, default=LatentHaltStudentTrainConfig.future_gain_loss_weight)
     parser.add_argument("--use-completion-risk", action="store_true")
     parser.add_argument("--use-empty-answer-risk", action="store_true")
     parser.add_argument("--use-answer-format-risk", action="store_true")
+    parser.add_argument("--use-answer-identity-stability", action="store_true")
     parser.add_argument("--readiness-target-mode", default=LatentHaltStudentTrainConfig.readiness_target_mode)
     parser.add_argument("--teacher-decisions-jsonl", default=LatentHaltStudentTrainConfig.teacher_decisions_jsonl)
     parser.add_argument("--selection-metric", default=LatentHaltStudentTrainConfig.selection_metric)
@@ -1249,10 +1274,12 @@ def parse_args() -> LatentHaltStudentTrainConfig:
         completion_risk_loss_weight=args.completion_risk_loss_weight,
         empty_answer_risk_loss_weight=args.empty_answer_risk_loss_weight,
         answer_format_risk_loss_weight=args.answer_format_risk_loss_weight,
+        answer_identity_stability_loss_weight=args.answer_identity_stability_loss_weight,
         future_gain_loss_weight=args.future_gain_loss_weight,
         use_completion_risk=args.use_completion_risk,
         use_empty_answer_risk=args.use_empty_answer_risk,
         use_answer_format_risk=args.use_answer_format_risk,
+        use_answer_identity_stability=args.use_answer_identity_stability,
         readiness_target_mode=args.readiness_target_mode,
         teacher_decisions_jsonl=args.teacher_decisions_jsonl,
         selection_metric=args.selection_metric,

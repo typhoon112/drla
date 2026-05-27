@@ -57,6 +57,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--completion-risk-thresholds", default="0.01,0.05,0.1,0.2,0.4,0.6,0.8,1.0")
     parser.add_argument("--empty-answer-risk-thresholds", default="0.005,0.01,0.02,0.05,0.075,0.1,0.15,0.2,0.3,0.4,0.6,0.8,1.0")
     parser.add_argument("--answer-format-risk-thresholds", default="0.005,0.01,0.02,0.05,0.075,0.1,0.15,0.2,0.3,0.4,0.6,0.8,1.0")
+    parser.add_argument("--answer-identity-stability-thresholds", default="0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9")
     parser.add_argument("--contentful-thresholds", default="0.0,0.5,0.7,0.9")
     parser.add_argument("--accuracy-drop-tolerance", type=float, default=0.0)
     parser.add_argument("--require-zero-calibration-loss", action="store_true")
@@ -153,6 +154,8 @@ def evaluate_latent_halt_student(args: argparse.Namespace) -> dict[str, Any]:
         thresholds["empty_answer_risk"] = parse_float_grid(args.empty_answer_risk_thresholds)
     if train_config.use_answer_format_risk:
         thresholds["answer_format_risk"] = parse_float_grid(args.answer_format_risk_thresholds)
+    if train_config.use_answer_identity_stability:
+        thresholds["answer_identity_stability"] = parse_float_grid(args.answer_identity_stability_thresholds)
     calibration_valid_indices = calibration["splits"]["valid"]
     calibration_valid_sample_count_before = unique_sample_count(calibration["sample_keys"], calibration_valid_indices)
     if args.max_calibration_samples_per_task is not None:
@@ -237,7 +240,7 @@ def evaluate_latent_halt_student(args: argparse.Namespace) -> dict[str, Any]:
             experiment_name=args.experiment_name,
             description="Student-only LatentHaltStudent-v1 threshold calibration and accuracy-cost evaluation.",
             config={
-                    "checkpoint": args.checkpoint,
+                "checkpoint": args.checkpoint,
                 "output_dir": args.output_dir,
                 "train_config": asdict(train_config),
                 "calibration_tasks": calibration_tasks,
@@ -249,13 +252,14 @@ def evaluate_latent_halt_student(args: argparse.Namespace) -> dict[str, Any]:
                 "require_zero_calibration_mismatch": args.require_zero_calibration_mismatch,
                 "calibration_scope": args.calibration_scope,
                 "online_input_policy": checkpoint["metadata"]["online_input_policy"],
-                    "decision_policy": (
-                        "earliest block with student readiness >= threshold, "
-                        "student prediction_change <= risk threshold, student contentful >= threshold, "
-                        "optional correctness >= threshold, "
-                        "optional completion_risk <= threshold, "
+                "decision_policy": (
+                    "earliest block with student readiness >= threshold, "
+                    "student prediction_change <= risk threshold, student contentful >= threshold, "
+                    "optional correctness >= threshold, "
+                    "optional completion_risk <= threshold, "
                     "optional empty_answer_risk <= threshold, "
-                    "and optional answer_format_risk <= threshold; else final block"
+                    "optional answer_format_risk <= threshold, "
+                    "and optional answer_identity_stability >= threshold; else final block"
                 ),
             },
             mode=args.swanlab_mode,
@@ -308,7 +312,8 @@ def evaluate_latent_halt_student(args: argparse.Namespace) -> dict[str, Any]:
         "decision_policy": (
             "student-only threshold policy over readiness, prediction_change risk, contentful, "
             "optional correctness, "
-            "optional completion_risk, optional empty_answer_risk, and optional answer_format_risk probabilities"
+            "optional completion_risk, optional empty_answer_risk, optional answer_format_risk, "
+            "and optional answer_identity_stability probabilities"
         ),
         "thresholds": thresholds,
         "calibration_policy": {
@@ -503,6 +508,7 @@ def sweep_thresholds(
     completion_grid = thresholds.get("completion_risk", [None])
     empty_answer_grid = thresholds.get("empty_answer_risk", [None])
     answer_format_grid = thresholds.get("answer_format_risk", [None])
+    answer_identity_grid = thresholds.get("answer_identity_stability", [None])
     for readiness_threshold in thresholds["readiness"]:
         for risk_threshold in thresholds["risk"]:
             for contentful_threshold in thresholds["contentful"]:
@@ -510,20 +516,23 @@ def sweep_thresholds(
                     for completion_risk_threshold in completion_grid:
                         for empty_answer_risk_threshold in empty_answer_grid:
                             for answer_format_risk_threshold in answer_format_grid:
-                                policy_thresholds = {
-                                    "readiness_threshold": readiness_threshold,
-                                    "risk_threshold": risk_threshold,
-                                    "contentful_threshold": contentful_threshold,
-                                }
-                                if correctness_threshold is not None:
-                                    policy_thresholds["correctness_threshold"] = correctness_threshold
-                                if completion_risk_threshold is not None:
-                                    policy_thresholds["completion_risk_threshold"] = completion_risk_threshold
-                                if empty_answer_risk_threshold is not None:
-                                    policy_thresholds["empty_answer_risk_threshold"] = empty_answer_risk_threshold
-                                if answer_format_risk_threshold is not None:
-                                    policy_thresholds["answer_format_risk_threshold"] = answer_format_risk_threshold
-                                result.append(policy_metrics_from_arrays(arrays, policy_thresholds))
+                                for answer_identity_threshold in answer_identity_grid:
+                                    policy_thresholds = {
+                                        "readiness_threshold": readiness_threshold,
+                                        "risk_threshold": risk_threshold,
+                                        "contentful_threshold": contentful_threshold,
+                                    }
+                                    if correctness_threshold is not None:
+                                        policy_thresholds["correctness_threshold"] = correctness_threshold
+                                    if completion_risk_threshold is not None:
+                                        policy_thresholds["completion_risk_threshold"] = completion_risk_threshold
+                                    if empty_answer_risk_threshold is not None:
+                                        policy_thresholds["empty_answer_risk_threshold"] = empty_answer_risk_threshold
+                                    if answer_format_risk_threshold is not None:
+                                        policy_thresholds["answer_format_risk_threshold"] = answer_format_risk_threshold
+                                    if answer_identity_threshold is not None:
+                                        policy_thresholds["answer_identity_stability_threshold"] = answer_identity_threshold
+                                    result.append(policy_metrics_from_arrays(arrays, policy_thresholds))
     return result
 
 
@@ -565,6 +574,7 @@ def build_policy_arrays(
             "completion_risk",
             "empty_answer_risk",
             "answer_format_risk",
+            "answer_identity_stability",
         ]
         if name in scores
     }
@@ -608,6 +618,7 @@ def policy_metrics_from_arrays(arrays: dict[str, Any], thresholds: dict[str, Any
     completion_risk_threshold = thresholds.get("completion_risk_threshold")
     empty_answer_risk_threshold = thresholds.get("empty_answer_risk_threshold")
     answer_format_risk_threshold = thresholds.get("answer_format_risk_threshold")
+    answer_identity_stability_threshold = thresholds.get("answer_identity_stability_threshold")
     scores = arrays["scores"]
     candidates = (
         arrays["mask"]
@@ -635,6 +646,11 @@ def policy_metrics_from_arrays(arrays: dict[str, Any], thresholds: dict[str, Any
         candidates = candidates & (scores["answer_format_risk"] <= answer_format_risk_threshold)
     else:
         answer_format_risk_threshold = None
+    if answer_identity_stability_threshold is not None and "answer_identity_stability" in scores:
+        answer_identity_stability_threshold = float(answer_identity_stability_threshold)
+        candidates = candidates & (scores["answer_identity_stability"] >= answer_identity_stability_threshold)
+    else:
+        answer_identity_stability_threshold = None
 
     has_candidate = candidates.any(dim=1)
     first_candidate = torch.argmax(candidates.to(torch.int64), dim=1)
@@ -676,12 +692,14 @@ def policy_metrics_from_arrays(arrays: dict[str, Any], thresholds: dict[str, Any
         "completion_risk_threshold": completion_risk_threshold,
         "empty_answer_risk_threshold": empty_answer_risk_threshold,
         "answer_format_risk_threshold": answer_format_risk_threshold,
+        "answer_identity_stability_threshold": answer_identity_stability_threshold,
         "boundary_risk_slack": boundary_risk_slack(
             {
                 "risk_threshold": risk_threshold,
                 "completion_risk_threshold": completion_risk_threshold,
                 "empty_answer_risk_threshold": empty_answer_risk_threshold,
                 "answer_format_risk_threshold": answer_format_risk_threshold,
+                "answer_identity_stability_threshold": answer_identity_stability_threshold,
             }
         ),
         "num_samples": count,
@@ -748,10 +766,14 @@ def policy_decisions_for_groups(
     completion_risk_threshold = thresholds.get("completion_risk_threshold")
     empty_answer_risk_threshold = thresholds.get("empty_answer_risk_threshold")
     answer_format_risk_threshold = thresholds.get("answer_format_risk_threshold")
+    answer_identity_stability_threshold = thresholds.get("answer_identity_stability_threshold")
     use_correctness = correctness_threshold is not None and "correctness" in scores
     use_completion_risk = completion_risk_threshold is not None and "completion_risk" in scores
     use_empty_answer_risk = empty_answer_risk_threshold is not None and "empty_answer_risk" in scores
     use_answer_format_risk = answer_format_risk_threshold is not None and "answer_format_risk" in scores
+    use_answer_identity_stability = (
+        answer_identity_stability_threshold is not None and "answer_identity_stability" in scores
+    )
     if correctness_threshold is not None:
         correctness_threshold = float(correctness_threshold)
     if completion_risk_threshold is not None:
@@ -760,6 +782,8 @@ def policy_decisions_for_groups(
         empty_answer_risk_threshold = float(empty_answer_risk_threshold)
     if answer_format_risk_threshold is not None:
         answer_format_risk_threshold = float(answer_format_risk_threshold)
+    if answer_identity_stability_threshold is not None:
+        answer_identity_stability_threshold = float(answer_identity_stability_threshold)
     for sample_key, row_indices in grouped:
         final_idx = row_indices[-1]
         stable_idx = prediction_stability_index(rows, row_indices)
@@ -782,6 +806,10 @@ def policy_decisions_for_groups(
                     not use_answer_format_risk
                     or float(scores["answer_format_risk"][idx].item()) <= answer_format_risk_threshold
                 )
+                and (
+                    not use_answer_identity_stability
+                    or float(scores["answer_identity_stability"][idx].item()) >= answer_identity_stability_threshold
+                )
             ):
                 selected_idx = idx
                 break
@@ -795,6 +823,9 @@ def policy_decisions_for_groups(
                 "completion_risk_threshold": completion_risk_threshold if use_completion_risk else None,
                 "empty_answer_risk_threshold": empty_answer_risk_threshold if use_empty_answer_risk else None,
                 "answer_format_risk_threshold": answer_format_risk_threshold if use_answer_format_risk else None,
+                "answer_identity_stability_threshold": (
+                    answer_identity_stability_threshold if use_answer_identity_stability else None
+                ),
                 "student_readiness": float(scores["readiness"][selected_idx].item()),
                 "student_prediction_change": float(scores["prediction_change"][selected_idx].item()),
                 "student_contentful": float(scores["contentful"][selected_idx].item()),
@@ -808,6 +839,10 @@ def policy_decisions_for_groups(
             payload["student_empty_answer_risk"] = float(scores["empty_answer_risk"][selected_idx].item())
         if use_answer_format_risk:
             payload["student_answer_format_risk"] = float(scores["answer_format_risk"][selected_idx].item())
+        if use_answer_identity_stability:
+            payload["student_answer_identity_stability"] = float(
+                scores["answer_identity_stability"][selected_idx].item()
+            )
         decisions.append(payload)
     return decisions
 
@@ -915,6 +950,7 @@ def policy_metrics(decisions: list[dict[str, Any]]) -> dict[str, Any]:
         "completion_risk_threshold": decisions[0].get("completion_risk_threshold"),
         "empty_answer_risk_threshold": decisions[0].get("empty_answer_risk_threshold"),
         "answer_format_risk_threshold": decisions[0].get("answer_format_risk_threshold"),
+        "answer_identity_stability_threshold": decisions[0].get("answer_identity_stability_threshold"),
         "num_samples": count,
         "accuracy": accuracy,
         "fixed_final_accuracy": final_accuracy,
@@ -1077,6 +1113,9 @@ def boundary_risk_slack(row: dict[str, Any]) -> float:
         value = row.get(field)
         if value is not None:
             slack += float(value)
+    answer_identity_threshold = row.get("answer_identity_stability_threshold")
+    if answer_identity_threshold is not None:
+        slack += 1.0 - float(answer_identity_threshold)
     return slack
 
 
@@ -1090,6 +1129,8 @@ def threshold_key(row: dict[str, Any]) -> tuple[float, ...]:
         fields.append("empty_answer_risk_threshold")
     if row.get("answer_format_risk_threshold") is not None:
         fields.append("answer_format_risk_threshold")
+    if row.get("answer_identity_stability_threshold") is not None:
+        fields.append("answer_identity_stability_threshold")
     return tuple(float(row[field]) for field in fields)
 
 

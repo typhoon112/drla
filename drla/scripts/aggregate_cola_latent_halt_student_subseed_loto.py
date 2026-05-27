@@ -165,6 +165,7 @@ def build_row(item: dict[str, Any]) -> dict[str, Any]:
         "risk_threshold": selected.get("risk_threshold"),
         "completion_risk_threshold": selected.get("completion_risk_threshold"),
         "contentful_threshold": selected.get("contentful_threshold"),
+        "answer_identity_stability_threshold": selected.get("answer_identity_stability_threshold"),
         "selected_accuracy": float(selected["accuracy"]),
         "fixed_final_accuracy": float(final["accuracy"]),
         "prediction_stability_accuracy": float(stability["accuracy"]),
