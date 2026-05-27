@@ -233,3 +233,30 @@ Race 已启动但在数据构造/训练前被中断，未形成有效训练结�
    - 第一层只处理 correctness rescue / harm。
    - 第二层在 correctness-safe frontier 内处理 text/answer-stability mismatch cleanup。
 3. 回到 richer latent/process interaction，而不是继续只在 11 个 action-student scalar heads 上做 gate；当前 scalar heads 可能已经丢掉了 answer-boundary 的局部结构。
+
+## 8. Post-hoc 校准复查
+
+已追加一个本地-only 校准分析，不启动 optimizer、不创建 SwanLab run，只加载四个 decomposed best checkpoint，在 source validation 上搜索 utility weights 和阈值，再应用到 held-out test。
+
+Artifact:
+
+```text
+/data1/luyifei/drla/outputs/cola_experiment_summaries/official8_full_b64_bs12_p1_decomposed_expectedutility_calibrated_partial4_seed20260527/summary.json
+```
+
+该脚本解析到 `device=cuda`，但主要耗时在阈值扫描和 sample metric 聚合；这不是训练，也不应上云。
+
+四任务同口径对比旧 v2：
+
+| Policy | v2 losses / mismatches / blocks | calibrated decomposed losses / mismatches / blocks | 结论 |
+|---|---:|---:|---|
+| action | `32 / 180 / 1.731` | `32 / 180 / 1.731` | 同一 action baseline |
+| source-valid cost | `0 / 50 / 2.396` | `0 / 54 / 2.375` | 省 `0.021` block，但 mismatch 更高 |
+| source-valid cost-limited | `0 / 103 / 1.880` | `0 / 103 / 1.876` | 几乎持平，只省 `0.004` block |
+| test tight-cost diagnostic | `15 / 99 / 1.769` | `27 / 125 / 1.751` | 更便宜但明显更不安全 |
+
+结论：简单 post-hoc 标量 utility-weight calibration 不能把 decomposed heads 转成优于 v2 的策略。它说明 head 中有可用信号，因为 source-valid safety 仍能做到 `0` losses；但 selector 仍然没有可靠处理 rare correctness rescue、text mismatch cleanup 和 block cost 的联合 frontier。下一步不应继续扫相同权重网格，而应转向：
+
+1. 显式的 constrained frontier learner：先保证 correctness/harm，再在安全 frontier 内处理 mismatch/cost。
+2. 更丰富的 latent/process interaction：不要只依赖 action student 的少量 scalar heads。
+3. 更严格的校准评估：报告每个 head 的 reliability / ECE、任务间阈值漂移、以及 rare rescue 的召回率。
