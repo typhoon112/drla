@@ -68,6 +68,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--calibration-subsample-seed", default="20260525")
     parser.add_argument("--calibration-scope", choices=["pooled", "per_task"], default="pooled")
     parser.add_argument("--calibration-boundary-risk-penalty", type=float, default=0.0)
+    parser.add_argument("--split-seed-override", type=int, default=None)
+    parser.add_argument("--calibration-loss-risk-target", type=float, default=None)
+    parser.add_argument("--calibration-mismatch-risk-target", type=float, default=None)
+    parser.add_argument("--calibration-risk-bound-z", type=float, default=1.96)
     parser.add_argument("--swanlab-mode", default="disabled")
     parser.add_argument("--experiment-name", default="official8-latent-halt-student-eval")
     return parser.parse_args()
@@ -90,12 +94,13 @@ def evaluate_latent_halt_student(args: argparse.Namespace) -> dict[str, Any]:
     if args.tasks:
         parse_tasks(args.tasks)
         train_config = replace(train_config, tasks=args.tasks)
+    split_seed = int(args.split_seed_override) if args.split_seed_override is not None else int(train_config.seed)
     calibration_tasks = args.calibration_tasks or train_config.tasks
     eval_tasks = args.eval_tasks or train_config.tasks
     parse_tasks(calibration_tasks)
     parse_tasks(eval_tasks)
-    calibration_config = replace(train_config, tasks=calibration_tasks)
-    eval_config = replace(train_config, tasks=eval_tasks)
+    calibration_config = replace(train_config, tasks=calibration_tasks, seed=split_seed)
+    eval_config = replace(train_config, tasks=eval_tasks, seed=split_seed)
     cross_eval = calibration_tasks != eval_tasks or args.eval_split == "all"
 
     output_dir = Path(args.output_dir)
@@ -211,11 +216,15 @@ def evaluate_latent_halt_student(args: argparse.Namespace) -> dict[str, Any]:
         max_calibration_mismatches=args.max_calibration_mismatches,
         max_calibration_mismatch_rate=args.max_calibration_mismatch_rate,
         boundary_risk_penalty=args.calibration_boundary_risk_penalty,
+        loss_risk_target=args.calibration_loss_risk_target,
+        mismatch_risk_target=args.calibration_mismatch_risk_target,
+        risk_bound_z=args.calibration_risk_bound_z,
         calibration_scope=args.calibration_scope,
         task_sweeps=valid_task_sweeps,
         task_baselines=valid_task_baselines,
     )
     selected_eval = find_matching_row(eval_sweep, selected_valid)
+    selected_eval = finalize_risk_bounds(dict(selected_eval), args.calibration_risk_bound_z)
     valid_decisions = policy_decisions(
         calibration["rows"],
         calibration["sample_keys"],
@@ -251,6 +260,11 @@ def evaluate_latent_halt_student(args: argparse.Namespace) -> dict[str, Any]:
                 "require_zero_calibration_loss": args.require_zero_calibration_loss,
                 "require_zero_calibration_mismatch": args.require_zero_calibration_mismatch,
                 "calibration_scope": args.calibration_scope,
+                "split_seed": split_seed,
+                "split_seed_override": args.split_seed_override,
+                "calibration_loss_risk_target": args.calibration_loss_risk_target,
+                "calibration_mismatch_risk_target": args.calibration_mismatch_risk_target,
+                "calibration_risk_bound_z": args.calibration_risk_bound_z,
                 "online_input_policy": checkpoint["metadata"]["online_input_policy"],
                 "decision_policy": (
                     "earliest block with student readiness >= threshold, "
@@ -308,6 +322,8 @@ def evaluate_latent_halt_student(args: argparse.Namespace) -> dict[str, Any]:
         "calibration_tasks": calibration_tasks,
         "eval_tasks": eval_tasks,
         "eval_split": eval_split_label,
+        "split_seed": split_seed,
+        "split_seed_override": args.split_seed_override,
         "online_input_policy": checkpoint["metadata"]["online_input_policy"],
         "decision_policy": (
             "student-only threshold policy over readiness, prediction_change risk, contentful, "
@@ -325,6 +341,9 @@ def evaluate_latent_halt_student(args: argparse.Namespace) -> dict[str, Any]:
             "max_calibration_samples_per_task": args.max_calibration_samples_per_task,
             "calibration_subsample_seed": args.calibration_subsample_seed,
             "calibration_boundary_risk_penalty": args.calibration_boundary_risk_penalty,
+            "calibration_loss_risk_target": args.calibration_loss_risk_target,
+            "calibration_mismatch_risk_target": args.calibration_mismatch_risk_target,
+            "calibration_risk_bound_z": args.calibration_risk_bound_z,
             "valid_rows_before_subsample": len(calibration["splits"]["valid"]),
             "valid_rows_after_subsample": len(calibration_valid_indices),
             "valid_samples_before_subsample": calibration_valid_sample_count_before,
@@ -788,6 +807,7 @@ def policy_decisions_for_groups(
         final_idx = row_indices[-1]
         stable_idx = prediction_stability_index(rows, row_indices)
         selected_idx = final_idx
+        halt_candidate_found = False
         for idx in row_indices:
             if (
                 float(scores["readiness"][idx].item()) >= readiness_threshold
@@ -812,8 +832,42 @@ def policy_decisions_for_groups(
                 )
             ):
                 selected_idx = idx
+                halt_candidate_found = True
                 break
         payload = decision_payload(rows, sample_key, selected_idx, final_idx, stable_idx)
+        selected_scores = {
+            name: float(tensor[selected_idx].item())
+            for name, tensor in scores.items()
+        }
+        thresholds_payload = {
+            "readiness": readiness_threshold,
+            "prediction_change": risk_threshold,
+            "contentful": contentful_threshold,
+            "correctness": correctness_threshold if use_correctness else None,
+            "completion_risk": completion_risk_threshold if use_completion_risk else None,
+            "empty_answer_risk": empty_answer_risk_threshold if use_empty_answer_risk else None,
+            "answer_format_risk": answer_format_risk_threshold if use_answer_format_risk else None,
+            "answer_identity_stability": (
+                answer_identity_stability_threshold if use_answer_identity_stability else None
+            ),
+        }
+        margins = {
+            "readiness": selected_scores["readiness"] - readiness_threshold,
+            "prediction_change": risk_threshold - selected_scores["prediction_change"],
+            "contentful": selected_scores["contentful"] - contentful_threshold,
+        }
+        if use_correctness:
+            margins["correctness"] = selected_scores["correctness"] - float(correctness_threshold)
+        if use_completion_risk:
+            margins["completion_risk"] = float(completion_risk_threshold) - selected_scores["completion_risk"]
+        if use_empty_answer_risk:
+            margins["empty_answer_risk"] = float(empty_answer_risk_threshold) - selected_scores["empty_answer_risk"]
+        if use_answer_format_risk:
+            margins["answer_format_risk"] = float(answer_format_risk_threshold) - selected_scores["answer_format_risk"]
+        if use_answer_identity_stability:
+            margins["answer_identity_stability"] = (
+                selected_scores["answer_identity_stability"] - float(answer_identity_stability_threshold)
+            )
         payload.update(
             {
                 "readiness_threshold": readiness_threshold,
@@ -831,6 +885,18 @@ def policy_decisions_for_groups(
                 "student_contentful": float(scores["contentful"][selected_idx].item()),
                 "student_correctness": float(scores["correctness"][selected_idx].item()),
                 "student_future_gain": float(scores["future_gain"][selected_idx].item()),
+                "readiness_state": {
+                    "version": "p1_latent_halt_student_v1",
+                    "halt_candidate_found": halt_candidate_found,
+                    "fallback_to_final": not halt_candidate_found,
+                    "selected_block": int(payload["selected_block"]),
+                    "final_block": int(payload["final_block"]),
+                    "prediction_stability_block": int(payload["prediction_stability_block"]),
+                    "scores": selected_scores,
+                    "thresholds": thresholds_payload,
+                    "margins": margins,
+                    "online_inputs": "latent_prefix_and_process_features_only",
+                },
             }
         )
         if use_completion_risk:
@@ -987,14 +1053,24 @@ def select_valid_threshold(
     max_calibration_mismatches: int | None,
     max_calibration_mismatch_rate: float | None,
     boundary_risk_penalty: float = 0.0,
+    loss_risk_target: float | None = None,
+    mismatch_risk_target: float | None = None,
+    risk_bound_z: float = 1.96,
     calibration_scope: str = "pooled",
     task_sweeps: dict[str, list[dict[str, Any]]] | None = None,
     task_baselines: dict[str, dict[str, dict[str, Any]]] | None = None,
 ) -> dict[str, Any]:
     if boundary_risk_penalty < 0:
         raise ValueError("calibration_boundary_risk_penalty must be >= 0")
+    if loss_risk_target is not None and loss_risk_target < 0:
+        raise ValueError("calibration_loss_risk_target must be >= 0")
+    if mismatch_risk_target is not None and mismatch_risk_target < 0:
+        raise ValueError("calibration_mismatch_risk_target must be >= 0")
+    if risk_bound_z < 0:
+        raise ValueError("calibration_risk_bound_z must be >= 0")
     task_lookup = build_task_threshold_lookup(task_sweeps) if task_sweeps else {}
     score_label = "min_selection_score" if boundary_risk_penalty > 0 else "min_blocks"
+    risk_label = "_riskbound" if loss_risk_target is not None or mismatch_risk_target is not None else ""
 
     def selection_key(row: dict[str, Any]) -> tuple[float, float, float]:
         slack = boundary_risk_slack(row)
@@ -1002,10 +1078,19 @@ def select_valid_threshold(
         return (score, row["avg_blocks"], -row["accuracy"])
 
     def finalize_selected(row: dict[str, Any], note: str) -> dict[str, Any]:
-        selected = row
+        selected = finalize_risk_bounds(dict(row), risk_bound_z)
         selected["selection_note"] = note
         selected["calibration_scope"] = calibration_scope
         selected["calibration_boundary_risk_penalty"] = boundary_risk_penalty
+        selected["calibration_loss_risk_target"] = loss_risk_target
+        selected["calibration_mismatch_risk_target"] = mismatch_risk_target
+        selected["calibration_risk_bound_z"] = risk_bound_z
+        selected["calibration_loss_risk_satisfied"] = (
+            loss_risk_target is None or selected["loss_upper_max"] <= loss_risk_target
+        )
+        selected["calibration_mismatch_risk_satisfied"] = (
+            mismatch_risk_target is None or selected["mismatch_upper_max"] <= mismatch_risk_target
+        )
         selected["calibration_selection_score"] = (
             selected["avg_blocks"] + boundary_risk_penalty * boundary_risk_slack(selected)
         )
@@ -1038,6 +1123,8 @@ def select_valid_threshold(
             return False
         if not row_meets_mismatch_cap(row):
             return False
+        if not row_meets_risk_bound_targets(row, loss_risk_target, mismatch_risk_target, risk_bound_z):
+            return False
         if calibration_scope != "per_task":
             return True
         if not task_baselines or not task_lookup:
@@ -1062,6 +1149,13 @@ def select_valid_threshold(
                 return False
             if not row_meets_mismatch_cap(task_row):
                 return False
+            if not row_meets_risk_bound_targets(
+                task_row,
+                loss_risk_target,
+                mismatch_risk_target,
+                risk_bound_z,
+            ):
+                return False
         return True
 
     candidates = [
@@ -1084,21 +1178,81 @@ def select_valid_threshold(
             if zero_loss_zero_mismatch:
                 return finalize_selected(
                     min(zero_loss_zero_mismatch, key=selection_key),
-                    f"{calibration_scope}_zero_loss_zero_mismatch_{score_label}",
+                    f"{calibration_scope}_zero_loss_zero_mismatch{risk_label}_{score_label}",
                 )
         if zero_loss:
             if max_calibration_mismatches is not None or max_calibration_mismatch_rate is not None:
-                note = f"{calibration_scope}_zero_loss_mismatch_capped_{score_label}"
+                note = f"{calibration_scope}_zero_loss_mismatch_capped{risk_label}_{score_label}"
             else:
-                note = f"{calibration_scope}_zero_loss_{score_label}"
+                note = f"{calibration_scope}_zero_loss{risk_label}_{score_label}"
             return finalize_selected(min(zero_loss, key=selection_key), note)
     if candidates:
         return finalize_selected(
             min(candidates, key=selection_key),
-            f"{calibration_scope}_accuracy_tolerance_{score_label}",
+            f"{calibration_scope}_accuracy_tolerance{risk_label}_{score_label}",
         )
     selected = max(sweep, key=lambda row: (row["accuracy"], -row["avg_blocks"]))
     return finalize_selected(selected, f"{calibration_scope}_no_tolerance_candidate_max_accuracy")
+
+
+def row_meets_risk_bound_targets(
+    row: dict[str, Any],
+    loss_risk_target: float | None,
+    mismatch_risk_target: float | None,
+    z_value: float,
+) -> bool:
+    if loss_risk_target is None and mismatch_risk_target is None:
+        return True
+    bounds = risk_bounds(row, z_value)
+    if loss_risk_target is not None and bounds["loss_upper_max"] > loss_risk_target:
+        return False
+    if mismatch_risk_target is not None and bounds["mismatch_upper_max"] > mismatch_risk_target:
+        return False
+    return True
+
+
+def finalize_risk_bounds(row: dict[str, Any], z_value: float) -> dict[str, Any]:
+    row.update(risk_bounds(row, z_value))
+    row["risk_bound_z"] = z_value
+    return row
+
+
+def risk_bounds(row: dict[str, Any], z_value: float) -> dict[str, float]:
+    total = int(row.get("num_samples", 0) or 0)
+    losses_final = int(row.get("losses_vs_final", 0) or 0)
+    losses_stability = int(row.get("losses_vs_prediction_stability", 0) or 0)
+    mismatches_final = int(row.get("prediction_mismatch_vs_final", 0) or 0)
+    mismatches_stability = int(row.get("prediction_mismatch_vs_prediction_stability", 0) or 0)
+    loss_upper_final = wilson_upper(losses_final, total, z_value)
+    loss_upper_stability = wilson_upper(losses_stability, total, z_value)
+    mismatch_upper_final = wilson_upper(mismatches_final, total, z_value)
+    mismatch_upper_stability = wilson_upper(mismatches_stability, total, z_value)
+    return {
+        "loss_rate_vs_final": losses_final / total if total else 0.0,
+        "loss_rate_vs_prediction_stability": losses_stability / total if total else 0.0,
+        "loss_wilson_upper_vs_final": loss_upper_final,
+        "loss_wilson_upper_vs_prediction_stability": loss_upper_stability,
+        "loss_upper_max": max(loss_upper_final, loss_upper_stability),
+        "mismatch_rate_vs_final": mismatches_final / total if total else 0.0,
+        "mismatch_rate_vs_prediction_stability": mismatches_stability / total if total else 0.0,
+        "mismatch_wilson_upper_vs_final": mismatch_upper_final,
+        "mismatch_wilson_upper_vs_prediction_stability": mismatch_upper_stability,
+        "mismatch_upper_max": max(mismatch_upper_final, mismatch_upper_stability),
+    }
+
+
+def wilson_upper(successes: int, total: int, z_value: float) -> float:
+    if total <= 0:
+        return 0.0
+    phat = successes / total
+    denom = 1.0 + z_value * z_value / total
+    center = (phat + z_value * z_value / (2.0 * total)) / denom
+    margin = (
+        z_value
+        * math.sqrt((phat * (1.0 - phat) + z_value * z_value / (4.0 * total)) / total)
+        / denom
+    )
+    return min(1.0, center + margin)
 
 
 def boundary_risk_slack(row: dict[str, Any]) -> float:
@@ -1152,6 +1306,11 @@ def find_matching_row(sweep: list[dict[str, Any]], selected: dict[str, Any]) -> 
             result["selection_note"] = selected.get("selection_note")
             result["calibration_scope"] = selected.get("calibration_scope")
             result["calibration_boundary_risk_penalty"] = selected.get("calibration_boundary_risk_penalty")
+            result["calibration_loss_risk_target"] = selected.get("calibration_loss_risk_target")
+            result["calibration_mismatch_risk_target"] = selected.get("calibration_mismatch_risk_target")
+            result["calibration_risk_bound_z"] = selected.get("calibration_risk_bound_z")
+            result["calibration_loss_risk_satisfied"] = selected.get("calibration_loss_risk_satisfied")
+            result["calibration_mismatch_risk_satisfied"] = selected.get("calibration_mismatch_risk_satisfied")
             result["calibration_selection_score"] = selected.get("calibration_selection_score")
             return result
     raise RuntimeError("selected threshold not found in test sweep")

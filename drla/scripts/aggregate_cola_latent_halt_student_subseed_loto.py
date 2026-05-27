@@ -149,6 +149,7 @@ def infer_subseed(path: Path, item: dict[str, Any]) -> str:
 
 def build_row(item: dict[str, Any]) -> dict[str, Any]:
     selected = item["selected_eval"]
+    valid_selected = item.get("selected_valid", {})
     final = item["eval_baselines"]["fixed_final"]
     stability = item["eval_baselines"]["prediction_stability"]
     num_samples = int(selected["num_samples"])
@@ -160,6 +161,7 @@ def build_row(item: dict[str, Any]) -> dict[str, Any]:
         "num_samples": num_samples,
         "summary_path": item["_summary_path"],
         "swanlab_mode": item.get("swanlab_mode"),
+        "split_seed": item.get("split_seed"),
         "selection_note": selected.get("selection_note"),
         "readiness_threshold": selected.get("readiness_threshold"),
         "risk_threshold": selected.get("risk_threshold"),
@@ -180,6 +182,14 @@ def build_row(item: dict[str, Any]) -> dict[str, Any]:
         "mismatches_vs_prediction_stability": int(
             selected.get("prediction_mismatch_vs_prediction_stability", 0)
         ),
+        "calibration_loss_risk_target": valid_selected.get("calibration_loss_risk_target"),
+        "calibration_mismatch_risk_target": valid_selected.get("calibration_mismatch_risk_target"),
+        "calibration_loss_risk_satisfied": valid_selected.get("calibration_loss_risk_satisfied"),
+        "calibration_mismatch_risk_satisfied": valid_selected.get("calibration_mismatch_risk_satisfied"),
+        "calibration_loss_upper_max": valid_selected.get("loss_upper_max"),
+        "calibration_mismatch_upper_max": valid_selected.get("mismatch_upper_max"),
+        "eval_loss_upper_max": selected.get("loss_upper_max"),
+        "eval_mismatch_upper_max": selected.get("mismatch_upper_max"),
     }
     row["loss_rate_vs_prediction_stability"] = rate(row["losses_vs_prediction_stability"], num_samples)
     row["mismatch_rate_vs_prediction_stability"] = rate(

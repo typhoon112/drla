@@ -383,6 +383,16 @@ python -m drla.scripts.aggregate_cola_latent_halt_student_subseed_loto \
 
 根据 `docs/DRLA_Implementation_Plan.md`，下一阶段不应继续做“再堆一个二分类 head”的局部调参。P2 应从 P1 的结论出发，推进到更接近最终目标的 decoder-free latent communication。
 
+优先级修订：P1 本身已经是 `decoder-as-teacher, latent-student` 的 decoder-free online-input verifier。进入 agent-to-agent 前，不再需要重新发明一个 verifier；应先把 P1 verifier v1 冻结，并完成：
+
+```text
+1. fresh seed / fresh split locked evaluation
+2. calibration / risk-control certificate
+3. readiness_state 接口
+```
+
+完成这三点后即可开始 agent-to-agent latent communication v1。
+
 ### P2.0 冻结 P1 后做 locked evaluation
 
 目的：把 P1 的阶段性结果从“开发集充分证据”升级成“投稿可引用结果”。
@@ -396,59 +406,111 @@ python -m drla.scripts.aggregate_cola_latent_halt_student_subseed_loto \
 
 原因：当前 P1 代码没有直接 test leakage，但同一 held-out test protocol 已经被多轮消融和人工决策复用。投稿主结论需要 locked evaluation。
 
-### P2.1 建立 decoder-free latent-readiness verifier
-
-目的：把 P1 的 decoder-supervised student 进一步变成 agent latent communication 可用的 online halt/verifier。
-
-路线：
+实施方式：
 
 ```text
-decoder/scorer/stability signals
-  -> offline teacher labels / soft targets
-latent trajectory + process features
-  -> student verifier
-inference:
-  only latent/process input
+复用当前 24 个 P1 best checkpoints
+使用 --split-seed-override 生成 fresh target valid/test split
+保持 threshold grid / calibration rule 不变
+只跑 local-only eval 和 aggregation
 ```
 
-优先处理：
-
-- answer identity boundary；
-- prefix / continuation risk；
-- SQuAD-style span completion；
-- LAMBADA / StoryCloze continuation 完整性；
-- uncertainty / calibration score，而不是再增加孤立 rare-event binary head。
-
-### P2.2 从“停不停”改成结构化 readiness state
-
-P1 已经证明 raw binary halt 不够表达高维 latent 状态。P2 的判别器应输出结构化状态：
+2026-05-27 首组已启动并完成 seed66 locked audit：
 
 ```text
-answer_identity_ready
-answer_completion_ready
-prediction_stability_ready
-future_gain_low
-uncertainty / risk
-halt utility
+model:
+  cross_task_full_b64_bs12_seed66_d64_pma4_trajtok_answer_identity_action_completionrisk_identitystable_20260527
+split_seed:
+  20260601
+eval_root:
+  /data1/luyifei/drla/outputs/cola_latent_halt_student_eval_locked/cross_task_full_b64_bs12_seed66_d64_pma4_trajtok_answer_identity_action_completionrisk_identitystable_split20260601_riskcert_20260527/subseed20260601
+aggregate_summary:
+  /data1/luyifei/drla/outputs/cola_experiment_summaries/official8_full_b64_bs12_p1_locked_seed66_split20260601_riskcert_20260527/summary.json
+micro:
+  samples = 4980
+  selected_accuracy = 20.763%
+  fixed_final_accuracy = 20.803%
+  avg_blocks = 1.863 / 4
+  losses_vs_final = 2
+  mismatches_vs_final = 23
+  mismatches_vs_prediction_stability = 25
 ```
 
-这比单个 halt probability 更自然，也更符合当前失败类型：多数错误不是“不知道答案”，而是答案 identity / boundary / continuation 还没有稳定。
+这组结果只能作为 locked audit 的第一组证据；不能根据该 locked result 继续改 P1 模型或阈值。
 
-### P2.3 改进校准与风险控制协议
+### P2.1 改进校准与风险控制协议
 
-当前 Wilson audit 显示 128-shot target calibration 还不足以形式化认证低风险。P2 需要：
+当前 calibration 是经验型：
 
-- 更大的 calibration split 或独立 calibration set；
-- source-task robust calibration；
-- task-family calibration；
-- conformal / risk-control style thresholding；
-- 报告 loss upper bound，而不只报告 observed loss。
+```text
+target-valid 128 samples
++ zero observed loss
++ mismatch cap
++ boundary penalty
+-> 选平均 block 最低的 threshold
+```
 
-注意：校准协议本身要在 locked evaluation 前冻结。
+改进版先不改变模型，而是在 eval summary 中加入 risk certificate：
 
-### P2.4 准备 agent-to-agent latent communication 最小闭环
+```text
+observed loss rate
+Wilson upper bound for loss
+observed mismatch rate
+Wilson upper bound for mismatch
+selected thresholds
+whether requested risk targets are satisfied
+```
 
-在 P2 verifier 稳定后，再进入 agent communication：
+已开始实现的 eval 参数：
+
+```text
+--calibration-loss-risk-target
+--calibration-mismatch-risk-target
+--calibration-risk-bound-z
+```
+
+如果设置 risk target，threshold selection 会优先选择满足 calibration risk upper bound 的候选；如果没有满足候选，则 summary 会明确记录 unsatisfied/fallback 情况。
+
+### P2.2 输出 readiness_state 接口
+
+当前 P1 多头输出不应只在 policy 内部被压成 stop/continue。agent-to-agent v1 应把多头收敛信息传给下一个 agent。
+
+`halt_decisions_*.jsonl` 已开始输出：
+
+```text
+readiness_state = {
+  halt_candidate_found,
+  fallback_to_final,
+  selected_block,
+  final_block,
+  prediction_stability_block,
+  scores: {
+    readiness,
+    prediction_change,
+    contentful,
+    correctness,
+    future_gain,
+    completion_risk,
+    answer_identity_stability,
+    ...
+  },
+  thresholds: {...},
+  margins: {...}
+}
+```
+
+这样下一个 agent 可以同时接收：
+
+```text
+latent memory
+halt action
+readiness_state
+risk certificate
+```
+
+### P2.3 准备 agent-to-agent latent communication 最小闭环
+
+完成 locked eval、risk certificate 和 readiness_state 后，开始 agent communication：
 
 ```text
 Agent A:
@@ -462,7 +524,7 @@ Agent B:
 
 这一步的在线协议不能依赖 decoder text。Decoder 只能作为离线 teacher、debugger 和最终 evaluation tool。
 
-### P2.5 LoRA/adapter/RL-style policy 只作为后续工具
+### P2.4 LoRA/adapter/RL-style policy 只作为后续工具
 
 实施文档已经明确：DiT LoRA / adapter 不作为提升 official benchmark accuracy 的主目标。P2 若使用 LoRA 或 RL-style policy，应服务于：
 
