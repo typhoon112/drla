@@ -186,8 +186,8 @@ class LatentHaltStudent(nn.Module):
             raise ValueError("pooling_mode must be one of: pma4_last, pma1, mean_max, all_tokens")
         if task_conditioning not in {"none", "query", "embedding"}:
             raise ValueError("task_conditioning must be one of: none, query, embedding")
-        if process_interaction_mode not in {"process_token", "film"}:
-            raise ValueError("process_interaction_mode must be one of: process_token, film")
+        if process_interaction_mode not in {"process_token", "film", "trajectory_token"}:
+            raise ValueError("process_interaction_mode must be one of: process_token, film, trajectory_token")
         if readout_context_mode not in {"none", "last_process_query"}:
             raise ValueError("readout_context_mode must be one of: none, last_process_query")
         if d_model % attention_heads != 0:
@@ -207,7 +207,7 @@ class LatentHaltStudent(nn.Module):
         self.slot_adapter = nn.Linear(latent_dim, d_model)
         self.slot_pos = nn.Embedding(block_size, d_model)
         self.block_pos = nn.Embedding(max_blocks, d_model)
-        if process_interaction_mode == "process_token":
+        if process_interaction_mode in {"process_token", "trajectory_token"}:
             self.process_mlp = nn.Sequential(
                 nn.LayerNorm(process_dim),
                 nn.Linear(process_dim, d_model),
@@ -216,6 +216,14 @@ class LatentHaltStudent(nn.Module):
                 nn.Linear(d_model, d_model),
             )
             self.tokens_per_block = block_size + 1
+            if process_interaction_mode == "trajectory_token":
+                self.trajectory_mlp = nn.Sequential(
+                    nn.LayerNorm(3 * d_model),
+                    nn.Linear(3 * d_model, 2 * d_model),
+                    nn.GELU(),
+                    nn.Dropout(dropout),
+                    nn.Linear(2 * d_model, d_model),
+                )
         else:
             self.film_mlp = nn.Sequential(
                 nn.LayerNorm(process_dim),
@@ -254,6 +262,8 @@ class LatentHaltStudent(nn.Module):
             self.summary_tokens_per_block = 2
         else:
             self.summary_tokens_per_block = self.tokens_per_block
+        if process_interaction_mode == "trajectory_token":
+            self.summary_tokens_per_block += 1
 
         self.inter_block = nn.TransformerEncoder(
             nn.TransformerEncoderLayer(
@@ -319,10 +329,12 @@ class LatentHaltStudent(nn.Module):
         block_pos = self.block_pos(torch.arange(max_blocks, device=device)).view(1, max_blocks, 1, -1)
 
         slot_tokens = self.slot_adapter(self.slot_norm(latent_blocks)) + slot_pos + block_pos
-        if self.process_interaction_mode == "process_token":
-            process_tokens = self.process_mlp(process_features).unsqueeze(2) + block_pos
+        if self.process_interaction_mode in {"process_token", "trajectory_token"}:
+            process_context = self.process_mlp(process_features)
+            process_tokens = process_context.unsqueeze(2) + block_pos
             block_tokens = torch.cat([slot_tokens, process_tokens], dim=2)
         else:
+            process_context = None
             scale_shift = self.film_mlp(process_features).view(batch_size, max_blocks, 2, self.d_model)
             scale = torch.tanh(scale_shift[:, :, 0, :]).unsqueeze(2)
             shift = scale_shift[:, :, 1, :].unsqueeze(2)
@@ -332,6 +344,14 @@ class LatentHaltStudent(nn.Module):
         intra_in = block_tokens.reshape(batch_size * max_blocks, tokens_per_block, self.d_model)
         intra_out = self.intra_block(intra_in).reshape(batch_size, max_blocks, tokens_per_block, self.d_model)
         block_summary = self.pool_blocks(intra_out)
+        if self.process_interaction_mode == "trajectory_token":
+            block_state = block_summary.mean(dim=2)
+            previous_state = torch.cat([torch.zeros_like(block_state[:, :1]), block_state[:, :-1]], dim=1)
+            state_delta = block_state - previous_state
+            trajectory_token = self.trajectory_mlp(
+                torch.cat([block_state, state_delta, process_context], dim=-1)
+            ).unsqueeze(2)
+            block_summary = torch.cat([block_summary, trajectory_token], dim=2)
 
         summary_per_block = block_summary.shape[2]
         memory = block_summary.reshape(batch_size, max_blocks * summary_per_block, self.d_model)
@@ -590,7 +610,7 @@ def validate_config(config: LatentHaltStudentTrainConfig) -> None:
         raise ValueError("unknown pooling_mode")
     if config.task_conditioning not in {"none", "query", "embedding"}:
         raise ValueError("unknown task_conditioning")
-    if config.process_interaction_mode not in {"process_token", "film"}:
+    if config.process_interaction_mode not in {"process_token", "film", "trajectory_token"}:
         raise ValueError("unknown process_interaction_mode")
     if config.process_feature_mode not in PROCESS_FEATURE_FIELD_MODES:
         raise ValueError("unknown process_feature_mode")

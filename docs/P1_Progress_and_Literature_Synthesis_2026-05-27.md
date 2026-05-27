@@ -371,3 +371,75 @@ Artifact:
 3. 因此 formal risk-control 不是“再调一个阈值”的捷径；它反而证明了现有阈值 sweep 缺乏可认证余量。下一步应提升 latent/process readout 或重新设计 calibration 数据协议，例如更大的 source calibration、跨 seed calibration、或把 risk constraint 作为训练目标的一部分。
 
 Sources: Learn-then-Test https://arxiv.org/abs/2110.01052; SelectiveNet https://arxiv.org/abs/1901.09192; BranchyNet https://arxiv.org/abs/1709.01686.
+
+## 11. Trajectory-Token Readout 实验
+
+在 formal risk-control 诊断之后，本轮没有继续扫 scalar selector，而是测试 richer latent/process interaction。依据来自三类文献信号：
+
+- Coconut 把 continuous thought 看成可承载多条候选路径的连续推理状态，说明 answer-enough 不应只看单个 block 表征，而要看推理状态如何从探索走向承诺。参考：https://arxiv.org/abs/2412.06769
+- CODI 通过 hidden-state distillation 把语言 CoT 压到连续空间，支持“decoder/teacher 可以离线提供监督，在线 student 只读 latent/process”。参考：https://arxiv.org/abs/2502.21074
+- CoLaR 强调 dynamic latent compression、非确定 latent head 和推理速度调节，进一步说明 block budget/trajectory 的动态性是核心，而不是固定阈值后处理。参考：https://arxiv.org/abs/2505.16552
+
+实现：
+
+```text
+process_interaction_mode = trajectory_token
+raw latent slots -> slot adapter + intra-block attention + PMA/last-slot pooling
+trajectory token = MLP([pooled block state, current-prev block delta, process state])
+pooled tokens + trajectory token -> causal inter-block Transformer -> multi-head readout
+```
+
+该 token 只使用当前 prefix 内可见 blocks 和 process features，不使用 decoder output、scorer、gold answer 或 future block，因此符合 P1 online-input 限制。
+
+完整实验协议：
+
+- 任务：official8 full LOTO，seed66/67/68。
+- 训练目标：`answer_identity_action + completion_risk`。
+- 训练数：`24` 个正式训练，全部 SwanLab cloud + CUDA，`valid_interval=50`，保存 `best_checkpoint.pt` 和 `last_checkpoint.pt`。
+- 训练根目录：
+
+```text
+/data1/luyifei/drla/outputs/cola_latent_halt_student_ablation/cross_task_full_b64_bs12_seed{66,67,68}_d64_pma4_trajtok_answer_identity_action_completionrisk_20260527
+```
+
+- 评估协议：target-task valid calibration，cap128，5 个 calibration subsample seeds，boundary-risk penalty `0.2`，本地-only eval。
+- 聚合脚本：
+
+```text
+/data1/luyifei/drla/drla/scripts/aggregate_cola_latent_halt_student_subseed_loto.py
+```
+
+- 聚合 summary：
+
+```text
+/data1/luyifei/drla/outputs/cola_experiment_summaries/official8_full_b64_bs12_p1_trajtok_answer_identity_action_completionrisk_boundarypen02_cross_seed_20260527/summary.json
+```
+
+同口径对比：
+
+| Route | Losses | Mismatches | Blocks | 解释 |
+|---|---:|---:|---:|---|
+| old `answer_identity_action + completion_risk` | `47` | `617` | `1.742/4` | 旧 single-student balanced route |
+| `trajectory_token + answer_identity_action + completion_risk` | `41` | `806` | `1.711/4` | 更便宜、loss 更少，但 mismatch 更高 |
+| `answer_identity_halt + completion_risk` strict | `31` | `699` | `1.824/4` | loss 更低，但 block 更贵 |
+
+按任务拆解：
+
+| Task | Old loss | Traj loss | Old mismatch | Traj mismatch | 结论 |
+|---|---:|---:|---:|---:|---|
+| LAMBADA | `32` | `28` | `59` | `64` | 小幅改善 prefix loss |
+| MMLU | `0` | `5` | `5` | `14` | `mmlu::5615` empty-answer risk 重新出现 |
+| HellaSwag | `0` | `6` | `116` | `300` | continuation/incomplete sentence 风险增加 |
+| SQuAD | `15` | `2` | `426` | `423` | 明显改善 answer-boundary loss |
+
+解释：
+
+1. trajectory token 是正向信号：它把 SQuAD loss 从 `15` 降到 `2`，说明 block-to-block latent delta 确实能帮助读出 answer-boundary。
+2. 它不是净胜：MMLU/HellaSwag 新增 loss，且 mismatch 从 `617` 增到 `806`。这说明更激进地读出 trajectory 会更早停，但不一定保留 answer text identity。
+3. Wilson risk-control 仍失败。Trajectory summary 在 `/data1/luyifei/drla/outputs/cola_experiment_summaries/official8_full_b64_bs12_p1_trajtok_answer_identity_action_completionrisk_wilson_risk_control_20260527/summary.json`；在 128-shot target calibration folds 下，Wilson loss targets `<=0.00025/0.0005/0.001/0.002` 都无法覆盖完整 `120/120` folds。经验 zero-loss-min-block 也有 `442` held-out losses，不能作为 safety policy。
+
+下一步判断：
+
+- 不应把 `trajectory_token` 直接设为默认主线；它应作为下一代学生模型的组件候选。
+- 更合理的下一步是训练 trajectory-level answer identity/stability objective：让模型显式预测“当前 answer identity 是否会被后续 block 改写/补全”，而不是只用 action label + completion head 间接表达。
+- 另一路是扩大或重设 calibration 数据协议，否则 formal risk-control 仍会因为 finite valid size 无法认证低 loss 风险。
