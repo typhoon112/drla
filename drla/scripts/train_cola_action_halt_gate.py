@@ -99,8 +99,9 @@ class ActionHaltGateTrainConfig:
 
 
 class ActionHaltGate(nn.Module):
-    def __init__(self, input_dim: int, hidden_dim: int, dropout: float):
+    def __init__(self, input_dim: int, hidden_dim: int, dropout: float, output_dim: int = 1):
         super().__init__()
+        self.output_dim = output_dim
         self.net = nn.Sequential(
             nn.LayerNorm(input_dim),
             nn.Linear(input_dim, hidden_dim),
@@ -109,11 +110,14 @@ class ActionHaltGate(nn.Module):
             nn.Linear(hidden_dim, hidden_dim),
             nn.GELU(),
             nn.Dropout(dropout),
-            nn.Linear(hidden_dim, 1),
+            nn.Linear(hidden_dim, output_dim),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.net(x).squeeze(-1)
+        output = self.net(x)
+        if self.output_dim == 1:
+            return output.squeeze(-1)
+        return output
 
 
 def train_action_halt_gate(config: ActionHaltGateTrainConfig) -> dict[str, Any]:
@@ -191,6 +195,16 @@ def train_action_halt_gate(config: ActionHaltGateTrainConfig) -> dict[str, Any]:
         "valid_utility_delta_mean": float(valid_bundle["utility_target"].mean().item()),
         "valid_utility_delta_min": float(valid_bundle["utility_target"].min().item()),
         "valid_utility_delta_max": float(valid_bundle["utility_target"].max().item()),
+        "train_rescue_rate": positive_rate(train_bundle["rescue_target"]),
+        "train_defer_mismatch_rescue_rate": positive_rate(train_bundle["mismatch_rescue_target"]),
+        "train_defer_harm_rate": positive_rate(train_bundle["harm_target"]),
+        "train_defer_mismatch_rate": positive_rate(train_bundle["mismatch_target"]),
+        "train_defer_cost_mean": float(train_bundle["cost_target"].mean().item()),
+        "valid_rescue_rate": positive_rate(valid_bundle["rescue_target"]),
+        "valid_defer_mismatch_rescue_rate": positive_rate(valid_bundle["mismatch_rescue_target"]),
+        "valid_defer_harm_rate": positive_rate(valid_bundle["harm_target"]),
+        "valid_defer_mismatch_rate": positive_rate(valid_bundle["mismatch_target"]),
+        "valid_defer_cost_mean": float(valid_bundle["cost_target"].mean().item()),
         "source_train_group_summary": summarize_case_groups(source_train_cases),
         "train_group_summary": summarize_case_groups(train_cases),
         "valid_group_summary": summarize_case_groups(valid_cases),
@@ -222,6 +236,16 @@ def train_action_halt_gate(config: ActionHaltGateTrainConfig) -> dict[str, Any]:
             train_bundle["utility_target"],
             train_bundle["utility_weight"],
         )
+    elif config.objective == "decomposed_expected_utility":
+        train_dataset = TensorDataset(
+            train_x,
+            train_bundle["y"],
+            train_bundle["rescue_target"],
+            train_bundle["mismatch_rescue_target"],
+            train_bundle["harm_target"],
+            train_bundle["mismatch_target"],
+            train_bundle["cost_target"],
+        )
     else:
         raise ValueError(f"unknown objective: {config.objective}")
     train_loader = DataLoader(
@@ -232,9 +256,20 @@ def train_action_halt_gate(config: ActionHaltGateTrainConfig) -> dict[str, Any]:
         drop_last=False,
     )
     valid_loader = DataLoader(TensorDataset(valid_x, valid_bundle["y"]), batch_size=config.batch_size)
-    model = ActionHaltGate(len(FEATURE_NAMES), config.hidden_dim, config.dropout).to(device)
+    model = ActionHaltGate(
+        len(FEATURE_NAMES),
+        config.hidden_dim,
+        config.dropout,
+        output_dim=objective_output_dim(config),
+    ).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay)
     class_pos_weight = pos_weight(train_bundle["y"]).to(device) if config.objective == "binary_bce" else None
+    decomposed_pos_weights = {
+        "rescue": pos_weight(train_bundle["rescue_target"]).to(device),
+        "mismatch_rescue": pos_weight(train_bundle["mismatch_rescue_target"]).to(device),
+        "harm": pos_weight(train_bundle["harm_target"]).to(device),
+        "mismatch": pos_weight(train_bundle["mismatch_target"]).to(device),
+    }
 
     run = init_experiment(
         stage="cola-action-halt-gate",
@@ -288,6 +323,42 @@ def train_action_halt_gate(config: ActionHaltGateTrainConfig) -> dict[str, Any]:
                         soft_target = torch.sigmoid(utility_target / config.utility_temperature)
                         loss_raw = F.binary_cross_entropy_with_logits(logits, soft_target, reduction="none")
                         loss = (loss_raw * utility_weight).sum() / utility_weight.sum().clamp_min(1e-6)
+                    elif config.objective == "decomposed_expected_utility":
+                        rescue_target = batch[2].to(device)
+                        mismatch_rescue_target = batch[3].to(device)
+                        harm_target = batch[4].to(device)
+                        mismatch_target = batch[5].to(device)
+                        cost_target = batch[6].to(device)
+                        if logits.ndim != 2 or logits.shape[1] != 5:
+                            raise ValueError("decomposed_expected_utility requires five output heads")
+                        rescue_loss = F.binary_cross_entropy_with_logits(
+                            logits[:, 0],
+                            rescue_target,
+                            pos_weight=decomposed_pos_weights["rescue"],
+                        )
+                        mismatch_rescue_loss = F.binary_cross_entropy_with_logits(
+                            logits[:, 1],
+                            mismatch_rescue_target,
+                            pos_weight=decomposed_pos_weights["mismatch_rescue"],
+                        )
+                        harm_loss = F.binary_cross_entropy_with_logits(
+                            logits[:, 2],
+                            harm_target,
+                            pos_weight=decomposed_pos_weights["harm"],
+                        )
+                        mismatch_loss = F.binary_cross_entropy_with_logits(
+                            logits[:, 3],
+                            mismatch_target,
+                            pos_weight=decomposed_pos_weights["mismatch"],
+                        )
+                        cost_loss = F.smooth_l1_loss(torch.sigmoid(logits[:, 4]), cost_target)
+                        loss = (
+                            rescue_loss
+                            + mismatch_rescue_loss
+                            + harm_loss
+                            + mismatch_loss
+                            + config.utility_block_cost * cost_loss
+                        )
                     else:
                         raise ValueError(f"unknown objective: {config.objective}")
                     optimizer.zero_grad(set_to_none=True)
@@ -612,12 +683,22 @@ def build_feature_bundle(
     sample_weights = [case_sample_weight(case, config) for case in cases]
     utility_targets = [case_utility_delta(case, config) for case in cases]
     utility_weights = [1.0 + config.utility_weight_scale * abs(value) for value in utility_targets]
+    rescue_targets = [case_label(case) for case in cases]
+    mismatch_rescue_targets = [case_defer_mismatch_rescue_label(case) for case in cases]
+    harm_targets = [case_defer_harm_label(case) for case in cases]
+    mismatch_targets = [case_defer_mismatch_label(case) for case in cases]
+    cost_targets = [case_defer_cost(case) for case in cases]
     return {
         "x": torch.tensor(features, dtype=torch.float32),
         "y": torch.tensor(labels, dtype=torch.float32),
         "sample_weight": torch.tensor(sample_weights, dtype=torch.float32),
         "utility_target": torch.tensor(utility_targets, dtype=torch.float32),
         "utility_weight": torch.tensor(utility_weights, dtype=torch.float32),
+        "rescue_target": torch.tensor(rescue_targets, dtype=torch.float32),
+        "mismatch_rescue_target": torch.tensor(mismatch_rescue_targets, dtype=torch.float32),
+        "harm_target": torch.tensor(harm_targets, dtype=torch.float32),
+        "mismatch_target": torch.tensor(mismatch_targets, dtype=torch.float32),
+        "cost_target": torch.tensor(cost_targets, dtype=torch.float32),
     }
 
 
@@ -646,6 +727,31 @@ def case_label(case: dict[str, Any]) -> float:
     return 1.0 if fallback_correct and not action_correct else 0.0
 
 
+def case_defer_harm_label(case: dict[str, Any]) -> float:
+    action_safe = not bool(case["action"]["loss_vs_final"])
+    fallback_loses = bool(case["fallback"]["loss_vs_final"])
+    return 1.0 if action_safe and fallback_loses else 0.0
+
+
+def case_defer_mismatch_rescue_label(case: dict[str, Any]) -> float:
+    action_mismatches = bool(case["action"].get("_prediction_mismatch_vs_final"))
+    fallback_matches = not bool(case["fallback"].get("_prediction_mismatch_vs_final"))
+    return 1.0 if action_mismatches and fallback_matches else 0.0
+
+
+def case_defer_mismatch_label(case: dict[str, Any]) -> float:
+    action_matches = not bool(case["action"].get("_prediction_mismatch_vs_final"))
+    fallback_mismatches = bool(case["fallback"].get("_prediction_mismatch_vs_final"))
+    return 1.0 if action_matches and fallback_mismatches else 0.0
+
+
+def case_defer_cost(case: dict[str, Any]) -> float:
+    action = case["action"]
+    fallback = case["fallback"]
+    final_block = max(float(action["final_block"]), 1.0)
+    return max(0.0, float(fallback["selected_block"]) - float(action["selected_block"])) / final_block
+
+
 def case_is_boundary_negative(case: dict[str, Any]) -> bool:
     action = case["action"]
     fallback = case["fallback"]
@@ -666,9 +772,7 @@ def case_sample_weight(case: dict[str, Any], config: ActionHaltGateTrainConfig) 
         return config.rescue_loss_weight
     action = case["action"]
     fallback = case["fallback"]
-    final_block = max(float(action["final_block"]), 1.0)
-    block_delta = max(0.0, float(fallback["selected_block"]) - float(action["selected_block"])) / final_block
-    return 1.0 + config.false_defer_block_weight * block_delta
+    return 1.0 + config.false_defer_block_weight * case_defer_cost({"action": action, "fallback": fallback})
 
 
 def case_utility_delta(case: dict[str, Any], config: ActionHaltGateTrainConfig) -> float:
@@ -709,6 +813,37 @@ def normalize(x: torch.Tensor, norm_stats: dict[str, torch.Tensor]) -> torch.Ten
     return (x - norm_stats["mean"]) / norm_stats["std"]
 
 
+def objective_output_dim(config: ActionHaltGateTrainConfig) -> int:
+    return 5 if config.objective == "decomposed_expected_utility" else 1
+
+
+def primary_logits(logits: torch.Tensor) -> torch.Tensor:
+    if logits.ndim == 2:
+        return logits[:, 0]
+    return logits
+
+
+def decomposed_expected_utility_score(
+    logits: torch.Tensor,
+    config: ActionHaltGateTrainConfig,
+) -> torch.Tensor:
+    if logits.ndim != 2 or logits.shape[1] != 5:
+        raise ValueError("decomposed_expected_utility requires five output heads")
+    rescue_prob = torch.sigmoid(logits[:, 0])
+    mismatch_rescue_prob = torch.sigmoid(logits[:, 1])
+    harm_prob = torch.sigmoid(logits[:, 2])
+    mismatch_prob = torch.sigmoid(logits[:, 3])
+    extra_block_cost = torch.sigmoid(logits[:, 4])
+    correctness_swing = config.utility_correct_reward + config.utility_early_wrong_penalty
+    return (
+        rescue_prob * correctness_swing
+        + mismatch_rescue_prob * config.utility_mismatch_penalty
+        - harm_prob * correctness_swing
+        - mismatch_prob * config.utility_mismatch_penalty
+        - extra_block_cost * config.utility_block_cost
+    )
+
+
 @torch.no_grad()
 def evaluate_binary(model: nn.Module, loader: DataLoader, device: torch.device) -> dict[str, float]:
     logits_list = []
@@ -735,6 +870,7 @@ def evaluate_binary_tensor(
 
 
 def binary_metrics(logits: torch.Tensor, target: torch.Tensor) -> dict[str, float]:
+    logits = primary_logits(logits)
     prob = torch.sigmoid(logits)
     pred = prob >= 0.5
     target_bool = target.bool()
@@ -784,13 +920,15 @@ def predict_policy_scores(
         logits = model(x[start : start + 65536].to(device)).cpu()
         if config.objective in {"utility_mse", "utility_pairwise"}:
             scores.append(logits)
+        elif config.objective == "decomposed_expected_utility":
+            scores.append(decomposed_expected_utility_score(logits, config))
         else:
             scores.append(torch.sigmoid(logits))
     return torch.cat(scores)
 
 
 def policy_thresholds(scores: torch.Tensor, config: ActionHaltGateTrainConfig) -> list[float]:
-    if config.objective not in {"utility_mse", "utility_pairwise"}:
+    if config.objective not in {"utility_mse", "utility_pairwise", "decomposed_expected_utility"}:
         return sorted({0.0, 0.01, 0.02, 0.05, 0.075, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99, 1.0})
     finite_scores = scores[torch.isfinite(scores)]
     if finite_scores.numel() == 0:
@@ -1018,6 +1156,11 @@ def policy_score_semantics(config: ActionHaltGateTrainConfig) -> str:
         return "raw accept-vs-defer utility ranking score; defer when score >= selected threshold"
     if config.objective == "utility_soft_bce":
         return "predicted soft utility advantage probability; defer when probability >= selected threshold"
+    if config.objective == "decomposed_expected_utility":
+        return (
+            "raw expected defer utility from five learned heads: rescue_loss_prob, mismatch_rescue_prob, "
+            "introduced_loss_prob, introduced_mismatch_prob, and extra_block_cost; defer when score >= selected threshold"
+        )
     return "predicted defer probability; defer when probability >= selected threshold"
 
 
@@ -1057,9 +1200,17 @@ def validate_config(config: ActionHaltGateTrainConfig) -> None:
     }.items():
         if not 0.0 <= value <= 1.0:
             raise ValueError(f"{name} must be between 0 and 1")
-    if config.objective not in {"binary_bce", "cost_weighted_bce", "utility_mse", "utility_pairwise", "utility_soft_bce"}:
+    if config.objective not in {
+        "binary_bce",
+        "cost_weighted_bce",
+        "utility_mse",
+        "utility_pairwise",
+        "utility_soft_bce",
+        "decomposed_expected_utility",
+    }:
         raise ValueError(
-            "objective must be binary_bce, cost_weighted_bce, utility_mse, utility_pairwise, or utility_soft_bce"
+            "objective must be binary_bce, cost_weighted_bce, utility_mse, utility_pairwise, "
+            "utility_soft_bce, or decomposed_expected_utility"
         )
     if config.utility_temperature <= 0.0:
         raise ValueError("utility_temperature must be positive")
