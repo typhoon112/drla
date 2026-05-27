@@ -533,6 +533,51 @@ Agent B:
 
 这一步的在线协议不能依赖 decoder text。Decoder 只能作为离线 teacher、debugger 和最终 evaluation tool。
 
+2026-05-27 已完成协议级 v1 packet substrate：
+
+```text
+script:
+  drla/scripts/build_cola_agent_latent_comm_packets.py
+input:
+  locked P1 seed66/67/68 halt_decisions_test.jsonl
+  readiness labels only for latent refs and process features
+output:
+  /data1/luyifei/drla/outputs/cola_agent_latent_comm/p2_agent_latent_comm_v1_locked_seed66_67_68_split20260601_20260527
+packets:
+  14940
+latent_block_refs:
+  27399
+unique_latent_files_checked:
+  8850
+missing_latent_files:
+  0
+forbidden_decoder_or_eval_fields:
+  0
+```
+
+packet 只允许在线携带：
+
+```text
+latent_memory.blocks[*].latent_ref
+latent_memory.blocks[*].process_features
+readiness_state.scores
+readiness_state.thresholds
+readiness_state.margins
+risk_certificate
+```
+
+明确禁止在线携带 decoded text、token ids、scored prediction、official score、gold/target、selected/final/prediction-stability prediction/correctness，以及 `prediction_stability_block`。`prediction_stability_block` 在原始 eval decision 中仍可作为审计字段存在，但在 agent communication packet 中已被 strip。
+
+Agent-B v0 receiver hint 统计：
+
+```text
+accept_latent_message = 14043
+accept_with_uncertified_calibration = 200
+accept_final_budget_message = 697
+```
+
+注意：这一步证明的是 latent message protocol、sanitization 和 artifact 链路成立；它还不是训练过的 Agent B，也不是 multi-agent accuracy/cost superiority 结论。
+
 ### P2.4 LoRA/adapter/RL-style policy 只作为后续工具
 
 实施文档已经明确：DiT LoRA / adapter 不作为提升 official benchmark accuracy 的主目标。P2 若使用 LoRA 或 RL-style policy，应服务于：
