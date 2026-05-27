@@ -335,3 +335,39 @@ Full official8 local-only calibration artifact:
 3. 当前瓶颈不只是 threshold selector，而是 action-student 11 个 scalar heads 的信息不足与跨任务概率校准不可靠。继续扫 utility weights / threshold grids 很可能只是在 loss、mismatch、blocks 之间搬动误差。
 4. 下一步应该回到 richer latent/process interaction 或 formal risk-control objective：让模型直接看更丰富的 latent trajectory / block-local evidence，并把 risk constraint 明确放进训练或校准协议，而不是只在 frozen scalar heads 上做后处理。
 5. 关于“为什么看起来像 CPU”：训练脚本解析到 CUDA 后模型参数和 batch 会放到 GPU；但 action->halt gate 只有 11 维输入、hidden=64，GPU 计算量很小，CPU 侧数据、SwanLab logging、valid 和 threshold sweep 会占主要时间。为避免误用，训练脚本已增加 CUDA fail-fast：非 dry-run 训练若解析到 CPU 会直接报错，并在新 summary/SwanLab config 中写入 resolved device。
+
+## 10. Formal Risk-Control 诊断
+
+为了避免继续在阈值上局部调参，本轮新增 local-only 风险控制审计：
+
+```text
+/data1/luyifei/drla/drla/scripts/analyze_latent_halt_risk_control.py
+```
+
+输入是已有 P1 d64 LOTO 的 `threshold_sweep_valid.csv` / `threshold_sweep_eval.csv`，覆盖 seed66/67/68 official8 共 `24` 个 held-out folds。脚本对 valid sweep 的 `losses_vs_prediction_stability` 和 `prediction_mismatch_vs_prediction_stability` 计算 Wilson 95% upper bound，只用 valid 选择阈值，再把同一阈值映射到 held-out eval。该分析不启动 optimizer，不创建 SwanLab run。
+
+Artifact:
+
+```text
+/data1/luyifei/drla/outputs/cola_experiment_summaries/official8_full_b64_bs12_p1_latent_halt_wilson_risk_control_cross_seed_20260527/summary.json
+```
+
+关键结果：
+
+| Policy | Complete folds | Held-out losses / mismatches / blocks | 结论 |
+|---|---:|---:|---|
+| empirical min-blocks | `24/24` | `1853 / 18926 / 1.559` | 便宜但明显不安全 |
+| empirical zero-loss valid | `24/24` | `58 / 1612 / 2.048` | 当前经验校准基线 |
+| Wilson loss `<=0.00025` | `0/24` | n/a | 当前 valid size 无法认证 low-loss target |
+| Wilson loss `<=0.0005` | `0/24` | n/a | 同上 |
+| Wilson loss `<=0.001` | `18/24` | n/a | 仍无法覆盖 official8 |
+| Wilson loss `<=0.002` | `24/24` | `111 / 2983 / 1.825` | 完整但 held-out loss 高于经验 zero-loss |
+| Wilson loss `<=0.002`, mismatch `<=0.005` | `24/24` | `104 / 2834 / 1.834` | 稍降 mismatch/loss，但仍不优于经验 zero-loss |
+
+解释：
+
+1. Learn-then-Test / selective prediction 的启发是正确的：早停应该被看成 risk-control / risk-coverage 问题，而不是固定 confidence 阈值。但当前 P1 valid split 每个 fold 只有约几千 calibration samples，若要证明 `<=0.00025` 或 `<=0.0005` 的低 loss 风险，0 个 valid loss 也不够。
+2. 放宽 Wilson target 到 `0.002` 可以选出完整策略，却在 held-out 上比经验 zero-loss valid 更差，说明当前 student score 的跨任务排序和校准仍不够稳。
+3. 因此 formal risk-control 不是“再调一个阈值”的捷径；它反而证明了现有阈值 sweep 缺乏可认证余量。下一步应提升 latent/process readout 或重新设计 calibration 数据协议，例如更大的 source calibration、跨 seed calibration、或把 risk constraint 作为训练目标的一部分。
+
+Sources: Learn-then-Test https://arxiv.org/abs/2110.01052; SelectiveNet https://arxiv.org/abs/1901.09192; BranchyNet https://arxiv.org/abs/1709.01686.
