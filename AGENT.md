@@ -95,6 +95,7 @@ swanlab verify
 - `/data1/luyifei/drla/docs/DRLA_Implementation_Plan.md`：当前研究计划、P0/P1 协议、标签、里程碑和风险。
 - `/data1/luyifei/drla/docs/DRLA_Current_Framework_and_Experiment_Report.md`：当前框架与实验进展报告。
 - `/data1/luyifei/drla/docs/P1_Progress_and_Literature_Synthesis_2026-05-27.md`：2026-05-27 P1 进展、文献复盘和 decomposed expected-utility official8 复核。
+- `/data1/luyifei/drla/docs/P1_Final_Archive_and_P2_Plan_2026-05-27.md`：P1 阶段归档、权重/config/metrics 复现清单、同基准主表和 P2 计划。
 - `/data1/luyifei/drla/docs/CURRENT_EXPERIMENT_STATUS.md`：active scripts、最新 artifact、当前结果和下一组实验。
 - `/data1/luyifei/drla/docs/Diffusion_Latent_Reasoning_Framework.md`：架构背景，尤其 block-level answer-enough halt。
 - `/data1/luyifei/drla/docs/SWANLAB_TRACKING.md`：SwanLab logging 和 resume 约定。
