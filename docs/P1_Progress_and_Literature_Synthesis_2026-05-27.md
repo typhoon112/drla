@@ -563,3 +563,96 @@ Wilson loss targets `<=0.00025/0.0005/0.001/0.002` 都选不出完整 `120/120` 
 2. 它支持“用 decoder 训练轻量 early-stop decoder/proxy，再在线只读 latent”的路线。
 3. 它还不是最终 agent latent communication 答案，因为训练 label 仍来自 decoder/text teacher，且 calibration 仍靠离线阈值搜索。
 4. 下一步应集中处理 empty-answer boundary、text-identity mismatch 和 formal calibration，而不是继续做小的 scalar threshold sweep。
+
+## 13. Empty-Answer Auxiliary Head 负结果
+
+### 13.1 为什么跑这一组
+
+上一组 identity-stability route 只剩 `4` 个 repeated losses，而且它们对应两个 unique empty-answer boundary misses。因此最直接的假设是：加入一个显式 `empty_answer_risk` teacher head，可能让 student 在 latent 上读出“当前 answer 还没有成形”的状态。
+
+这组实验不是小样本验证，而是完整 official8 full LOTO：
+
+- 训练：seed66/67/68 x 8 held-out tasks，共 `24` 个正式训练。
+- 训练约束：全部 CUDA/GPU + SwanLab cloud，`valid_interval=50`，`metrics.jsonl`，`best_checkpoint.pt`，`last_checkpoint.pt`。
+- Eval：`120` 个 local-only target-calibration eval，cap128，5 个 calibration subseeds，boundary penalty `0.2`。
+
+Artifacts:
+
+```text
+training roots:
+/data1/luyifei/drla/outputs/cola_latent_halt_student_ablation/cross_task_full_b64_bs12_seed{66,67,68}_d64_pma4_trajtok_answer_identity_action_completionrisk_emptyrisk_identitystable_20260527
+
+eval roots:
+/data1/luyifei/drla/outputs/cola_latent_halt_student_eval_ablation/cross_task_full_b64_bs12_seed{66,67,68}_d64_pma4_trajtok_answer_identity_action_completionrisk_emptyrisk_identitystable_targetcal_cap128_boundarypen02_subseeds_20260527
+
+aggregate:
+/data1/luyifei/drla/outputs/cola_experiment_summaries/official8_full_b64_bs12_p1_trajtok_answer_identity_action_completionrisk_emptyrisk_identitystable_boundarypen02_cross_seed_20260527/summary.json
+```
+
+### 13.2 结果
+
+| Route | Losses | Mismatches | Blocks | 结论 |
+|---|---:|---:|---:|---|
+| identity-stability route | `4` | `606` | `1.812/4` | 当前最好 P1 student-only 点 |
+| + `empty_answer_risk` | `24` | `623` | `1.829/4` | 更贵且更不安全 |
+
+按 task，loss 主要落在：
+
+- LAMBADA: `5` losses
+- HellaSwag: `5` losses
+- SQuAD: `14` losses
+
+unique 失败样本只有 `5` 个，但每个被 calibration subseeds 重复选中：
+
+| Task | Early answer | Stable/final answer | 类型 |
+|---|---|---|---|
+| LAMBADA | `quarant` | `quarantined` | word prefix |
+| HellaSwag | `... walking` | `... walking him.` | continuation |
+| SQuAD | `John` | `John Vanderbank's workshop` | entity prefix |
+| SQuAD | `27` | `27 September 2001` | date prefix |
+| SQuAD | `Metro Trains` | `Metro Trains Melbourne` | entity prefix |
+
+这说明新增 head 没有解决“answer enough”的核心问题，反而把错误从 empty-answer 转成 prefix/continuation identity risk。
+
+### 13.3 Calibration 诊断
+
+在有 loss 的 folds 中，selected threshold 经常是：
+
+```text
+empty_answer_risk_threshold = 1.0
+answer_identity_stability_threshold = 0.1
+contentful_threshold = 0.0
+```
+
+也就是说，valid calibration 为了省 block 常常选择完全放开 empty-risk gate。即便强行做 post-hoc empty threshold cap，也不理想：
+
+```text
+/data1/luyifei/drla/outputs/cola_experiment_summaries/official8_full_b64_bs12_p1_trajtok_answer_identity_action_completionrisk_emptyrisk_identitystable_empty_cap_diagnostic_20260527/summary.json
+```
+
+只有 `empty_answer_risk_threshold <= 0.005` 能覆盖完整 `120/120` folds 且达到 `0` losses，但成本升到 `3.808/4` blocks，几乎退回 final-block policy。
+
+Formal risk-control 也没有改善：
+
+```text
+/data1/luyifei/drla/outputs/cola_experiment_summaries/official8_full_b64_bs12_p1_trajtok_answer_identity_action_completionrisk_emptyrisk_identitystable_wilson_risk_control_20260527/summary.json
+```
+
+Wilson loss targets `<=0.00025/0.0005/0.001/0.002` 全部是 `0/120` complete folds；经验 zero-loss-min-block 仍有 `139` held-out losses。
+
+### 13.4 文献解释
+
+这次负结果和 auxiliary loss / multi-task negative transfer 文献一致：辅助目标如果只是局部 proxy，而不是和主 decision 同构，可能通过 shared representation 改坏主任务。`empty_answer_risk` 是一个太窄的 proxy，它只覆盖“空答案”，但真实风险是 prefix/continuation answer identity 尚未稳定。
+
+参考点：
+
+- Adapting Auxiliary Losses Using Gradient Similarity 指出辅助 loss 是否有益取决于它和主任务梯度是否一致；冲突辅助信号会伤害主目标。https://arxiv.org/abs/1812.02224
+- Multi-task learning negative transfer 相关工作强调固定辅助权重和不匹配辅助任务可能产生 negative transfer。https://arxiv.org/abs/2012.09575
+- Early-Exiting with Risk Control / Learn-then-Test 的启发是：早停要作为 risk-control 问题处理，不能只靠 confidence/proxy threshold。https://openreview.net/pdf?id=hACHuDzi1U 和 https://arxiv.org/abs/2110.01052
+
+### 13.5 下一步判断
+
+1. `empty_answer_risk` head 不应成为默认路线。
+2. 当前最好点仍是 identity-stability route：`4` losses / `606` mismatches / `1.812/4` blocks。
+3. 下一步应把 prefix/continuation answer-identity risk 设计成与 halt action 同构的目标，例如直接预测“若现在停，answer identity 会不会被未来 block 补全/改写”，而不是继续堆窄二分类头。
+4. Calibration 需要从“选最低 block 的 permissive threshold”转向更强的 risk-control protocol；当前 128-shot target calibration 对极低 loss 风险没有认证能力。

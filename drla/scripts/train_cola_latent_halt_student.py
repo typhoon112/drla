@@ -642,6 +642,7 @@ def validate_config(config: LatentHaltStudentTrainConfig) -> None:
         "readiness_prediction_change_completion_empty_mean_auroc",
         "readiness_prediction_change_completion_format_mean_auroc",
         "readiness_prediction_change_completion_identity_mean_auroc",
+        "readiness_prediction_change_completion_empty_identity_mean_auroc",
     }:
         raise ValueError("unknown selection_metric")
     for name, value in {
@@ -1126,6 +1127,17 @@ def select_metric(metrics: dict[str, float], selection_metric: str) -> float:
         value = mean_metric(
             metrics,
             ["readiness_auroc", "prediction_change_auroc", "completion_risk_auroc", "answer_identity_stability_auroc"],
+        )
+    elif selection_metric == "readiness_prediction_change_completion_empty_identity_mean_auroc":
+        value = mean_metric(
+            metrics,
+            [
+                "readiness_auroc",
+                "prediction_change_auroc",
+                "completion_risk_auroc",
+                "empty_answer_risk_auroc",
+                "answer_identity_stability_auroc",
+            ],
         )
     else:
         value = metrics.get(selection_metric, float("nan"))
