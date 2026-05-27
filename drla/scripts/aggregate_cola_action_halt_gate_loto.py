@@ -24,6 +24,9 @@ POLICIES = [
     "target_valid_cost_limited_selected_gate",
     "best_test_gate_by_loss",
     "best_test_gate_under_action_plus_0p10_blocks",
+    "source_valid_constrained_safety_gate",
+    "source_valid_constrained_cost_limited_gate",
+    "best_test_constrained_under_action_plus_0p10_blocks",
 ]
 
 WEIGHTED_FIELDS = [

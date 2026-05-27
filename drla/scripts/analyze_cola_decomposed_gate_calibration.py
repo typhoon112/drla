@@ -2,8 +2,9 @@
 
 This script is local-only.  It does not train a model or create SwanLab runs.
 It reloads existing decomposed_expected_utility checkpoints, sweeps utility
-weights and thresholds on source validation cases, and applies the selected
-policy to the held-out test split.
+weights and constrained head thresholds on source validation cases, diagnoses
+per-head reliability and rare-event capture, and applies the selected policies
+to the held-out test split.
 """
 
 from __future__ import annotations
@@ -46,6 +47,13 @@ DEFAULT_OUTPUT_DIR = (
     "official8_full_b64_bs12_p1_decomposed_expectedutility_calibrated_partial4_seed20260527"
 )
 QUANTILES = [0.0, 0.01, 0.02, 0.05, 0.075, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99, 1.0]
+CONSTRAINED_QUANTILES = [0.0, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99, 1.0]
+HEAD_TARGETS = [
+    ("rescue_loss", "rescue_target"),
+    ("mismatch_rescue", "mismatch_rescue_target"),
+    ("introduced_loss", "harm_target"),
+    ("introduced_mismatch", "mismatch_target"),
+]
 
 
 def analyze_decomposed_gate_calibration(
@@ -84,10 +92,12 @@ def analyze_decomposed_gate_calibration(
                 "swanlab_run_id": item.get("swanlab_run_id"),
                 "selected_weights": item["selected_weights"],
                 "data_summary": item["data_summary"],
+                "head_diagnostics": item["head_diagnostics"],
             }
             for item in task_summaries
         ],
         "readout": build_readout(aggregate),
+        "head_diagnostic_readout": build_head_diagnostic_readout(task_summaries),
         "note": (
             "Local-only selector analysis over frozen decomposed heads; no optimizer was created "
             "and no SwanLab run was started."
@@ -120,8 +130,10 @@ def analyze_task(summary_path: Path, output_dir: Path, device: torch.device) -> 
     model.to(device)
     model.eval()
 
-    valid_x = normalize(build_feature_bundle(valid_cases, config)["x"], checkpoint["norm_stats"])
-    test_x = normalize(build_feature_bundle(test_cases, config)["x"], checkpoint["norm_stats"])
+    valid_bundle = build_feature_bundle(valid_cases, config)
+    test_bundle = build_feature_bundle(test_cases, config)
+    valid_x = normalize(valid_bundle["x"], checkpoint["norm_stats"])
+    test_x = normalize(test_bundle["x"], checkpoint["norm_stats"])
     valid_probs = predict_head_probs(model, valid_x, device)
     test_probs = predict_head_probs(model, test_x, device)
     valid_stats = build_case_stats(valid_cases)
@@ -156,6 +168,10 @@ def analyze_task(summary_path: Path, output_dir: Path, device: torch.device) -> 
             "num_test_cases": len(test_cases),
             "action_valid_avg_blocks": action_valid_blocks,
             "action_test_avg_blocks": action_test_blocks,
+        },
+        "head_diagnostics": {
+            "valid": head_diagnostics(valid_probs, valid_bundle),
+            "test": head_diagnostics(test_probs, test_bundle),
         },
         "selected_weights": selection["selected_weights"],
         "test_policies": policies,
@@ -247,6 +263,16 @@ def select_calibrated_policies(
             action_avg_blocks=action_test_blocks,
         ),
     }
+    selected.update(
+        select_constrained_head_policies(
+            valid_stats=valid_stats,
+            test_stats=test_stats,
+            valid_probs=valid_probs,
+            test_probs=test_probs,
+            action_valid_blocks=action_valid_blocks,
+            action_test_blocks=action_test_blocks,
+        )
+    )
     return {
         "test_policies": {name: pair["test"] for name, pair in selected.items()},
         "selected_weights": {name: weights_from_row(pair["valid"]) for name, pair in selected.items()},
@@ -293,6 +319,213 @@ def bool_tensor_field(items: list[dict[str, Any]], key: str) -> torch.Tensor:
     return torch.tensor([bool(item[key]) for item in items], dtype=torch.bool)
 
 
+def head_diagnostics(probs: torch.Tensor, bundle: dict[str, torch.Tensor]) -> dict[str, Any]:
+    diagnostics: dict[str, Any] = {}
+    for head_idx, (head_name, target_name) in enumerate(HEAD_TARGETS):
+        target = bundle[target_name].float()
+        prob = probs[:, head_idx].float()
+        diagnostics[head_name] = binary_head_diagnostics(prob, target)
+    diagnostics["extra_block_cost"] = cost_head_diagnostics(probs[:, 4].float(), bundle["cost_target"].float())
+    return diagnostics
+
+
+def select_constrained_head_policies(
+    *,
+    valid_stats: dict[str, torch.Tensor],
+    test_stats: dict[str, torch.Tensor],
+    valid_probs: torch.Tensor,
+    test_probs: torch.Tensor,
+    action_valid_blocks: float,
+    action_test_blocks: float,
+) -> dict[str, dict[str, dict[str, Any]]]:
+    rows = []
+    for rescue_threshold in coarse_thresholds(valid_probs[:, 0], high_is_positive=True):
+        for mismatch_threshold in coarse_thresholds(valid_probs[:, 1], high_is_positive=True):
+            for cost_threshold in coarse_thresholds(valid_probs[:, 4], high_is_positive=False):
+                valid_mask = constrained_defer_mask(
+                    valid_stats,
+                    valid_probs,
+                    rescue_threshold=rescue_threshold,
+                    mismatch_threshold=mismatch_threshold,
+                    cost_threshold=cost_threshold,
+                )
+                test_mask = constrained_defer_mask(
+                    test_stats,
+                    test_probs,
+                    rescue_threshold=rescue_threshold,
+                    mismatch_threshold=mismatch_threshold,
+                    cost_threshold=cost_threshold,
+                )
+                valid_row = metrics_for_defer_mask(valid_stats, valid_mask)
+                test_row = metrics_for_defer_mask(test_stats, test_mask)
+                params = {
+                    "rescue_threshold": rescue_threshold,
+                    "mismatch_threshold": mismatch_threshold,
+                    "cost_threshold": cost_threshold,
+                }
+                valid_row.update(params)
+                test_row.update(params)
+                rows.append({"valid": valid_row, "test": test_row})
+    return {
+        "source_valid_constrained_safety_gate": select_pair(rows, mode="safety", action_avg_blocks=action_valid_blocks),
+        "source_valid_constrained_cost_limited_gate": select_pair(
+            rows,
+            mode="cost_limited",
+            action_avg_blocks=action_valid_blocks,
+        ),
+        "best_test_constrained_under_action_plus_0p10_blocks": select_pair_by_test(
+            rows,
+            mode="cost_limited",
+            action_avg_blocks=action_test_blocks,
+        ),
+    }
+
+
+def coarse_thresholds(values: torch.Tensor, *, high_is_positive: bool) -> list[float]:
+    finite = values[torch.isfinite(values)].float()
+    if finite.numel() == 0:
+        return [0.0]
+    quantiles = torch.tensor(CONSTRAINED_QUANTILES, dtype=torch.float32)
+    thresholds = torch.quantile(finite, quantiles).tolist()
+    thresholds.append(0.5)
+    if high_is_positive:
+        thresholds.append(float(finite.min().item()) - 1e-6)
+        thresholds.append(float(finite.max().item()) + 1e-6)
+    else:
+        thresholds.append(float(finite.max().item()) + 1e-6)
+    return sorted({round(float(value), 8) for value in thresholds})
+
+
+def constrained_defer_mask(
+    stats: dict[str, torch.Tensor],
+    probs: torch.Tensor,
+    *,
+    rescue_threshold: float,
+    mismatch_threshold: float,
+    cost_threshold: float,
+) -> torch.Tensor:
+    can_defer = stats["action_selected_block"] < stats["final_block"]
+    wants_defer = (probs[:, 0] >= rescue_threshold) | (probs[:, 1] >= mismatch_threshold)
+    predicted_affordable = probs[:, 4] <= cost_threshold
+    return can_defer & wants_defer & predicted_affordable
+
+
+def binary_head_diagnostics(prob: torch.Tensor, target: torch.Tensor) -> dict[str, Any]:
+    target = target.float()
+    pred = (prob >= 0.5).float()
+    positives = int(target.sum().item())
+    tp = int(((pred == 1) & (target == 1)).sum().item())
+    fp = int(((pred == 1) & (target == 0)).sum().item())
+    fn = int(((pred == 0) & (target == 1)).sum().item())
+    precision = tp / max(tp + fp, 1)
+    recall = tp / max(tp + fn, 1)
+    return {
+        "num_samples": int(target.numel()),
+        "positive_count": positives,
+        "positive_rate": positives / max(int(target.numel()), 1),
+        "mean_pred": float(prob.mean().item()),
+        "brier": float(torch.mean((prob - target) ** 2).item()),
+        "ece_10": calibration_error(prob, target, n_bins=10),
+        "mce_10": calibration_error(prob, target, n_bins=10, maximum=True),
+        "auroc": binary_auroc_local(prob, target),
+        "auprc": binary_auprc_local(prob, target),
+        "threshold_0p5_precision": precision,
+        "threshold_0p5_recall": recall,
+        "threshold_0p5_predicted_positive_rate": float(pred.mean().item()),
+        "top_fraction_capture": top_fraction_capture(prob, target),
+    }
+
+
+def cost_head_diagnostics(prob: torch.Tensor, target: torch.Tensor) -> dict[str, Any]:
+    diff = prob - target
+    centered_prob = prob - prob.mean()
+    centered_target = target - target.mean()
+    denom = torch.sqrt(torch.sum(centered_prob**2) * torch.sum(centered_target**2)).clamp_min(1e-12)
+    return {
+        "num_samples": int(target.numel()),
+        "mean_target": float(target.mean().item()),
+        "mean_pred": float(prob.mean().item()),
+        "mae": float(torch.mean(torch.abs(diff)).item()),
+        "rmse": float(torch.sqrt(torch.mean(diff**2)).item()),
+        "pearson": float((torch.sum(centered_prob * centered_target) / denom).item()),
+    }
+
+
+def calibration_error(prob: torch.Tensor, target: torch.Tensor, *, n_bins: int, maximum: bool = False) -> float:
+    prob = prob.float()
+    target = target.float()
+    total = max(int(prob.numel()), 1)
+    gaps = []
+    weighted = 0.0
+    for index in range(n_bins):
+        lower = index / n_bins
+        upper = (index + 1) / n_bins
+        if index == 0:
+            mask = (prob >= lower) & (prob <= upper)
+        else:
+            mask = (prob > lower) & (prob <= upper)
+        count = int(mask.sum().item())
+        if count == 0:
+            continue
+        gap = abs(float(prob[mask].mean().item()) - float(target[mask].mean().item()))
+        gaps.append(gap)
+        weighted += gap * count / total
+    if maximum:
+        return max(gaps) if gaps else 0.0
+    return weighted
+
+
+def top_fraction_capture(prob: torch.Tensor, target: torch.Tensor) -> dict[str, dict[str, Any]]:
+    positives = int(target.sum().item())
+    result = {}
+    if prob.numel() == 0:
+        return result
+    order = torch.argsort(prob, descending=True)
+    sorted_target = target[order].float()
+    sorted_prob = prob[order].float()
+    for fraction in [0.001, 0.005, 0.01, 0.05, 0.10]:
+        k = max(1, int(round(float(prob.numel()) * fraction)))
+        hits = int(sorted_target[:k].sum().item())
+        result[f"top_{fraction:g}"] = {
+            "k": k,
+            "positive_hits": hits,
+            "recall": hits / max(positives, 1),
+            "precision": hits / k,
+            "min_score": float(sorted_prob[k - 1].item()),
+        }
+    return result
+
+
+def binary_auroc_local(prob: torch.Tensor, target: torch.Tensor) -> float:
+    target = target.float()
+    positives = int(target.sum().item())
+    negatives = int(target.numel() - positives)
+    if positives == 0 or negatives == 0:
+        return float("nan")
+    order = torch.argsort(prob)
+    ranks = torch.empty_like(order, dtype=torch.float32)
+    ranks[order] = torch.arange(1, len(prob) + 1, dtype=torch.float32)
+    pos_rank_sum = ranks[target.bool()].sum()
+    auc = (pos_rank_sum - positives * (positives + 1) / 2) / (positives * negatives)
+    return float(auc.item())
+
+
+def binary_auprc_local(prob: torch.Tensor, target: torch.Tensor) -> float:
+    target = target.float()
+    positives = target.sum()
+    if positives <= 0:
+        return float("nan")
+    order = torch.argsort(prob, descending=True)
+    sorted_target = target[order]
+    tp = torch.cumsum(sorted_target, dim=0)
+    fp = torch.cumsum(1 - sorted_target, dim=0)
+    precision = tp / (tp + fp).clamp_min(1e-6)
+    recall = tp / positives
+    recall_prev = torch.cat([torch.zeros(1), recall[:-1]])
+    area = torch.sum((recall - recall_prev) * precision)
+    return float(area.item())
+
+
 def metrics_for_threshold_fast(
     stats: dict[str, torch.Tensor],
     scores: torch.Tensor,
@@ -300,7 +533,16 @@ def metrics_for_threshold_fast(
 ) -> dict[str, Any]:
     can_defer = stats["action_selected_block"] < stats["final_block"]
     use_fallback = can_defer & (scores >= threshold)
-    n = int(scores.numel())
+    row = metrics_for_defer_mask(stats, use_fallback)
+    row["threshold"] = threshold
+    return row
+
+
+def metrics_for_defer_mask(
+    stats: dict[str, torch.Tensor],
+    use_fallback: torch.Tensor,
+) -> dict[str, Any]:
+    n = int(use_fallback.numel())
     selected_block = torch.where(use_fallback, stats["fallback_selected_block"], stats["action_selected_block"])
     selected_correct = torch.where(
         use_fallback,
@@ -358,7 +600,6 @@ def metrics_for_threshold_fast(
         "prediction_mismatch_rate_vs_final": mismatch_final_count / max(n, 1),
         "prediction_mismatch_vs_prediction_stability": mismatch_stability_count,
         "prediction_mismatch_rate_vs_prediction_stability": mismatch_stability_count / max(n, 1),
-        "threshold": threshold,
         "defer_count": defer_count,
         "defer_rate": defer_count / max(n, 1),
         "rescued_action_losses": rescued_action_losses,
@@ -457,12 +698,16 @@ def rank_row(row: dict[str, Any], *, mode: str) -> tuple[float, ...]:
 
 
 def weights_from_row(row: dict[str, Any]) -> dict[str, float]:
-    return {
-        "correctness_weight": float(row["correctness_weight"]),
-        "mismatch_weight": float(row["mismatch_weight"]),
-        "cost_weight": float(row["cost_weight"]),
-        "threshold": float(row["threshold"]),
-    }
+    keys = [
+        "correctness_weight",
+        "mismatch_weight",
+        "cost_weight",
+        "threshold",
+        "rescue_threshold",
+        "mismatch_threshold",
+        "cost_threshold",
+    ]
+    return {key: float(row[key]) for key in keys if key in row}
 
 
 def build_readout(aggregate: dict[str, dict[str, Any]]) -> list[str]:
@@ -472,7 +717,10 @@ def build_readout(aggregate: dict[str, dict[str, Any]]) -> list[str]:
         "source_valid_cost_selected_gate",
         "source_valid_cost_limited_selected_gate",
         "source_valid_safety_selected_gate",
+        "source_valid_constrained_cost_limited_gate",
+        "source_valid_constrained_safety_gate",
         "best_test_gate_under_action_plus_0p10_blocks",
+        "best_test_constrained_under_action_plus_0p10_blocks",
     ]:
         metrics = aggregate.get(policy)
         if not metrics:
@@ -485,6 +733,34 @@ def build_readout(aggregate: dict[str, dict[str, Any]]) -> list[str]:
             )
         )
     return rows
+
+
+def build_head_diagnostic_readout(task_summaries: list[dict[str, Any]]) -> list[str]:
+    rows = []
+    for item in task_summaries:
+        task = item["config"]["heldout_task"]
+        test_heads = item["head_diagnostics"]["test"]
+        rescue = test_heads["rescue_loss"]
+        mismatch = test_heads["mismatch_rescue"]
+        cost = test_heads["extra_block_cost"]
+        rows.append(
+            (
+                f"{task}: rescue positives={rescue['positive_count']} "
+                f"auprc={format_float(rescue['auprc'])} top5%recall="
+                f"{rescue['top_fraction_capture']['top_0.05']['recall']:.3f}; "
+                f"mismatch positives={mismatch['positive_count']} "
+                f"auprc={format_float(mismatch['auprc'])} top5%recall="
+                f"{mismatch['top_fraction_capture']['top_0.05']['recall']:.3f}; "
+                f"cost_mae={cost['mae']:.3f} cost_r={cost['pearson']:.3f}."
+            )
+        )
+    return rows
+
+
+def format_float(value: float) -> str:
+    if value != value:
+        return "nan"
+    return f"{value:.4f}"
 
 
 def write_task_csv(path: Path, task_summaries: list[dict[str, Any]]) -> None:

@@ -236,7 +236,7 @@ Race 已启动但在数据构造/训练前被中断，未形成有效训练结�
 
 ## 8. Post-hoc 校准复查
 
-已追加一个本地-only 校准分析，不启动 optimizer、不创建 SwanLab run，只加载四个 decomposed best checkpoint，在 source validation 上搜索 utility weights 和阈值，再应用到 held-out test。
+已追加一个本地-only 校准分析，不启动 optimizer、不创建 SwanLab run，只加载四个 decomposed best checkpoint，在 source validation 上搜索 utility weights、constrained head thresholds 和阈值，再应用到 held-out test。
 
 Artifact:
 
@@ -246,7 +246,16 @@ Artifact:
 
 该脚本解析到 `device=cuda`，但主要耗时在阈值扫描和 sample metric 聚合；这不是训练，也不应上云。
 
-四任务同口径对比旧 v2：
+本轮补充查阅了 selective prediction / risk control / early-exit confidence 的资料。关键启发是：
+
+- SelectiveNet 把 reject/accept 作为和主任务联合优化的 risk-coverage 问题，而不是只在预训练 confidence 上手写阈值。
+- Learn-then-Test 把校准看成显式 risk control：先学习模型，再用校准集选择满足风险约束的策略。
+- Neural calibration 论文说明神经网络 confidence 往往不是可靠概率，需要用 reliability / ECE 等诊断。
+- BranchyNet 类 early-exit 工作使用“早层足够 confident 则退出”的思想，但这类 confidence threshold 需要额外校准，不能直接替代本项目的 latent-only halt risk。
+
+Sources: SelectiveNet https://arxiv.org/abs/1901.09192; Learn-then-Test https://arxiv.org/abs/2110.01052; neural calibration https://proceedings.mlr.press/v70/guo17a.html; BranchyNet https://arxiv.org/abs/1709.01686.
+
+四任务 scalar utility 同口径对比旧 v2：
 
 | Policy | v2 losses / mismatches / blocks | calibrated decomposed losses / mismatches / blocks | 结论 |
 |---|---:|---:|---|
@@ -255,7 +264,26 @@ Artifact:
 | source-valid cost-limited | `0 / 103 / 1.880` | `0 / 103 / 1.876` | 几乎持平，只省 `0.004` block |
 | test tight-cost diagnostic | `15 / 99 / 1.769` | `27 / 125 / 1.751` | 更便宜但明显更不安全 |
 
-结论：简单 post-hoc 标量 utility-weight calibration 不能把 decomposed heads 转成优于 v2 的策略。它说明 head 中有可用信号，因为 source-valid safety 仍能做到 `0` losses；但 selector 仍然没有可靠处理 rare correctness rescue、text mismatch cleanup 和 block cost 的联合 frontier。下一步不应继续扫相同权重网格，而应转向：
+constrained two-stage selector 结果：
+
+| Policy | result losses / mismatches / blocks | 对比 |
+|---|---:|---|
+| source-valid constrained safety | `0 / 28 / 2.674` | 与 always-defer/prediction-stability 安全点几乎相同 |
+| source-valid constrained cost-limited | `0 / 98 / 1.882` | 比 scalar cost-limited 少 `5` mismatches，但 block 多 `0.006`；仍只是与 v2 持平附近 |
+| test constrained tight-cost diagnostic | `23 / 113 / 1.758` | 比 scalar tight-cost 好，但仍差于 v2 `15 / 99 / 1.769` |
+
+Head diagnostics 暴露了核心问题：
+
+| Held-out task | rescue positives / AUPRC / top5% recall | mismatch positives / AUPRC / top5% recall | cost head |
+|---|---:|---:|---:|
+| HellaSwag | `0 / nan / 0.000` | `88 / 0.2510 / 0.477` | `MAE 0.035, r 0.817` |
+| LAMBADA | `32 / 0.0287 / 0.406` | `59 / 0.0186 / 0.237` | `MAE 0.133, r 0.758` |
+| MMLU | `0 / nan / 0.000` | `5 / 0.0002 / 0.000` | `MAE 0.059, r -0.180` |
+| OBQA | `0 / nan / 0.000` | `0 / nan / 0.000` | `MAE 0.056, r 0.619` |
+
+Source-valid 与 held-out test 的事件分布漂移很明显：例如 MMLU source-valid 中 rescue/mismatch rescue positives 分别是 `215/905`，但 held-out test 只有 `0/5`；OBQA test 两类 rescue 都是 `0`，但 heads 仍给出较高 mean probability。也就是说，当前 source-valid calibration 会把其他任务的 rare-boundary 频率外推到 held-out task，导致过度 defer。
+
+结论：简单 post-hoc 标量 utility-weight calibration 不能把 decomposed heads 转成优于 v2 的策略；constrained selector 只带来小幅改善，说明 selector 形式不是唯一瓶颈。head 中有可用信号，因为 source-valid safety 仍能做到 `0` losses，HellaSwag mismatch rescue 也有排序能力；但当前 scalar student heads 的概率不可靠、跨任务分布漂移大、MMLU/OBQA 上几乎没有可救事件。下一步不应继续扫相同权重网格，而应转向：
 
 1. 显式的 constrained frontier learner：先保证 correctness/harm，再在安全 frontier 内处理 mismatch/cost。
 2. 更丰富的 latent/process interaction：不要只依赖 action student 的少量 scalar heads。
