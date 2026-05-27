@@ -114,7 +114,56 @@ boundary penalty 0.2 in target calibration
 1. **Official Cola final-answer accuracy**：完整跑 4 个 block，再在官方 prepared benchmark 上评分。P1 不以提升这个数字为目标。
 2. **Same-split halt comparison**：在同一样本上比较 P1 selected block 与 fixed-final / prediction-stability answer。它衡量的是学生模型能否更早停下，并尽量不改变 correctness。
 
-下表是当前最优 P1 student 的 same-split halt comparison。它应该被解读为“P1 在节省 block 的同时保留了多少 correctness”，而不是“P1 提升了 Cola 官方 benchmark 精度”。
+### 数据隔离与泄漏审计
+
+当前 P1 LOTO protocol 的代码层面数据隔离是合理的：
+
+- P1 student checkpoint 按 `leave-one-task-out` 训练。以 `leave_mmlu_out` 为例，训练只使用另外 7 个任务，不使用 MMLU。
+- split 是按 `sample_key = task::sample_id` 的 deterministic hash 做的，同一个原始样本的 block 1/2/3/4 会进入同一个 split，不会出现 block 级泄漏。
+- target task 的 `valid` split 只用于 threshold calibration；target task 的 `test` split 才用于报告结果。
+- eval 脚本先在 `valid` sweep 中选 threshold，再用同一个 threshold 去 `test` sweep 中取 matching row；没有在该脚本内用 target-test loss 选择 threshold。
+- P1 在线输入只包含 latent prefix 与 process features，不输入 decoded text、decoder stop probe、task scorer、gold answer 或 correctness。
+
+但有三个必须在论文中如实说明的 caveat：
+
+- **这不是 zero-shot target-task evaluation**：当前主结果使用 `128-shot target-valid calibration`，且 calibration 目标依赖 decoder/scorer/text-derived 标签。因此它是 target-calibrated LOTO，不是完全无标签迁移。
+- **P1 是 decoder-supervised student**：训练标签来自 decoder/text/scorer 信号；推理时不输入这些信号。这个设定合理，但不能写成“完全不使用 decoder 信息训练”。
+- **当前 P1 阶段存在 test-protocol 复用风险**：我们在同一套 held-out test protocol 上做了多轮消融、人工分析和路线选择。代码没有直接 test leakage，但如果要作为最终投稿主结论，最好冻结模型/阈值选择规则后，在 fresh seed 或 fresh split 上做一次 locked evaluation。
+
+因此，下面的主表可以作为当前 P1 阶段的 paper-style comparison，但论文表述应标注为：
+
+```text
+official8 full, b64/bs12, seeds 66/67/68,
+leave-one-task-out, 128-shot target-valid calibration,
+held-out target-test evaluation,
+N = 14,729 target-test decisions x 5 calibration repeats = 73,645 repeated decisions.
+```
+
+### 同基准主表
+
+下表把最优质的几个 P1 模型/策略和同一基准下的 Cola final-block baseline 放在一起。这里的 `Cola fixed-final` 不是 official full benchmark mean，而是同一批 P1 held-out target-test samples 上跑满 block 4 的 final-block baseline。
+
+| 方法 | 类型 | Acc (%) | ΔAcc vs Cola (pp) | Blocks | Saved blocks | Loss vs Cola | Mismatch vs Cola | 备注 |
+|---|---|---:|---:|---:|---:|---:|---:|---|
+| Cola fixed-final | baseline | 22.534 | +0.000 | 4.000 | 0.000 | 0 (0.0000%) | 0 (0.000%) | 同一样本跑满 block 4 |
+| Prediction-stability | decoder/text baseline | 22.534 | +0.000 | 2.508 | 1.492 | 0 (0.0000%) | 5 (0.007%) | 非 student；用于早停上界参照 |
+| P1 answer-id action + completion | student | 22.481 | -0.053 | 1.742 | 2.258 | 47 (0.0638%) | 612 (0.831%) | 低成本早期路线 |
+| P1 answer-id halt + completion | student | 22.498 | -0.035 | 1.824 | 2.176 | 31 (0.0421%) | 694 (0.942%) | 更保守的 halt target |
+| P1 traj-token + action + completion | student | 22.492 | -0.042 | 1.711 | 2.289 | 41 (0.0557%) | 801 (1.088%) | trajectory/delta 架构消融 |
+| P1 traj-token + identity-stability | student | 22.528 | -0.005 | 1.812 | 2.188 | 4 (0.0054%) | 601 (0.816%) | 最佳低 loss/cost student |
+| P1 identity-stability + contentful>=0.5 | safety diagnostic | 22.534 | +0.000 | 2.924 | 1.076 | 0 (0.0000%) | 146 (0.198%) | 零 loss 诊断，成本高 |
+| P1 identity-stability + empty-risk | negative ablation | 22.508 | -0.026 | 1.829 | 2.171 | 24 (0.0326%) | 618 (0.839%) | 负消融 |
+| P1 learned gate v2 cost-limited | post-hoc gate | 22.527 | -0.007 | 1.859 | 2.141 | 10 (0.0136%) | 465 (0.631%) | source-valid 选择；二阶段策略 |
+| P1 learned gate v2 safety | post-hoc gate | 22.534 | +0.000 | 2.722 | 1.278 | 0 (0.0000%) | 130 (0.177%) | source-valid 选择；安全参照 |
+
+建议论文主张聚焦在两行：
+
+- `P1 traj-token + identity-stability`：最佳 student-only low-loss/cost frontier，只有 `4/73,645` repeated losses，同时平均节省 `2.188` blocks。
+- `P1 learned gate v2 safety` 或 `contentful>=0.5`：作为 safety/cost trade-off 参照，而不是主 student-only 结果。
+
+不要把 `best_test_gate_by_loss`、`causal_oracle_defer_after_action`、以及任何 test-selected oracle policy 放入主表；这些只适合做 upper-bound diagnostic。旧的 `d64_pma4` baseline 聚合使用 full/all split `147,057` samples，也不应和当前 target-test repeated protocol 混在主表中。
+
+下表是当前最优 P1 student 的逐任务 same-split halt comparison。它应该被解读为“P1 在节省 block 的同时保留了多少 correctness”，而不是“P1 提升了 Cola 官方 benchmark 精度”。
 
 | 任务 | Official Cola full acc mean (%) | P1 same-split fixed acc (%) | P1 selected acc (%) | 相对 same-split fixed 的变化 | 相对 final 节省 blocks |
 |---|---:|---:|---:|---:|---:|
