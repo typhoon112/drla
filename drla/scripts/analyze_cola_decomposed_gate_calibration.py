@@ -239,11 +239,17 @@ def select_calibrated_policies(
     action_test_blocks: float,
 ) -> dict[str, Any]:
     all_rows = []
+    valid_task_masks = build_task_masks(valid_cases)
     for weights in weight_grid():
         valid_scores = score_from_weights(valid_probs, weights)
         test_scores = score_from_weights(test_probs, weights)
         for threshold in score_thresholds(valid_scores):
-            valid_row = metrics_for_threshold_fast(valid_stats, valid_scores, threshold)
+            valid_row = metrics_for_threshold_fast(
+                valid_stats,
+                valid_scores,
+                threshold,
+                task_masks=valid_task_masks,
+            )
             test_row = metrics_for_threshold_fast(test_stats, test_scores, threshold)
             valid_row.update(weights)
             test_row.update(weights)
@@ -254,6 +260,16 @@ def select_calibrated_policies(
         "source_valid_cost_limited_selected_gate": select_pair(
             all_rows,
             mode="cost_limited",
+            action_avg_blocks=action_valid_blocks,
+        ),
+        "source_valid_task_robust_safety_gate": select_pair(
+            all_rows,
+            mode="task_robust_safety",
+            action_avg_blocks=action_valid_blocks,
+        ),
+        "source_valid_task_robust_cost_limited_gate": select_pair(
+            all_rows,
+            mode="task_robust_cost_limited",
             action_avg_blocks=action_valid_blocks,
         ),
         "best_test_gate_by_loss": select_pair_by_test(all_rows, mode="safety", action_avg_blocks=action_test_blocks),
@@ -271,6 +287,7 @@ def select_calibrated_policies(
             test_probs=test_probs,
             action_valid_blocks=action_valid_blocks,
             action_test_blocks=action_test_blocks,
+            valid_task_masks=valid_task_masks,
         )
     )
     return {
@@ -319,6 +336,14 @@ def bool_tensor_field(items: list[dict[str, Any]], key: str) -> torch.Tensor:
     return torch.tensor([bool(item[key]) for item in items], dtype=torch.bool)
 
 
+def build_task_masks(cases: list[dict[str, Any]]) -> dict[str, torch.Tensor]:
+    tasks = sorted({str(case["task"]) for case in cases})
+    return {
+        task: torch.tensor([str(case["task"]) == task for case in cases], dtype=torch.bool)
+        for task in tasks
+    }
+
+
 def head_diagnostics(probs: torch.Tensor, bundle: dict[str, torch.Tensor]) -> dict[str, Any]:
     diagnostics: dict[str, Any] = {}
     for head_idx, (head_name, target_name) in enumerate(HEAD_TARGETS):
@@ -337,6 +362,7 @@ def select_constrained_head_policies(
     test_probs: torch.Tensor,
     action_valid_blocks: float,
     action_test_blocks: float,
+    valid_task_masks: dict[str, torch.Tensor],
 ) -> dict[str, dict[str, dict[str, Any]]]:
     rows = []
     for rescue_threshold in coarse_thresholds(valid_probs[:, 0], high_is_positive=True):
@@ -357,6 +383,7 @@ def select_constrained_head_policies(
                     cost_threshold=cost_threshold,
                 )
                 valid_row = metrics_for_defer_mask(valid_stats, valid_mask)
+                add_task_robust_metrics(valid_row, valid_stats, valid_mask, valid_task_masks)
                 test_row = metrics_for_defer_mask(test_stats, test_mask)
                 params = {
                     "rescue_threshold": rescue_threshold,
@@ -371,6 +398,16 @@ def select_constrained_head_policies(
         "source_valid_constrained_cost_limited_gate": select_pair(
             rows,
             mode="cost_limited",
+            action_avg_blocks=action_valid_blocks,
+        ),
+        "source_valid_task_robust_constrained_safety_gate": select_pair(
+            rows,
+            mode="task_robust_safety",
+            action_avg_blocks=action_valid_blocks,
+        ),
+        "source_valid_task_robust_constrained_cost_limited_gate": select_pair(
+            rows,
+            mode="task_robust_cost_limited",
             action_avg_blocks=action_valid_blocks,
         ),
         "best_test_constrained_under_action_plus_0p10_blocks": select_pair_by_test(
@@ -530,12 +567,44 @@ def metrics_for_threshold_fast(
     stats: dict[str, torch.Tensor],
     scores: torch.Tensor,
     threshold: float,
+    *,
+    task_masks: dict[str, torch.Tensor] | None = None,
 ) -> dict[str, Any]:
     can_defer = stats["action_selected_block"] < stats["final_block"]
     use_fallback = can_defer & (scores >= threshold)
     row = metrics_for_defer_mask(stats, use_fallback)
     row["threshold"] = threshold
+    if task_masks is not None:
+        add_task_robust_metrics(row, stats, use_fallback, task_masks)
     return row
+
+
+def add_task_robust_metrics(
+    row: dict[str, Any],
+    stats: dict[str, torch.Tensor],
+    use_fallback: torch.Tensor,
+    task_masks: dict[str, torch.Tensor],
+) -> None:
+    task_rows = {}
+    for task, mask in task_masks.items():
+        task_stats = {key: value[mask] for key, value in stats.items()}
+        task_rows[task] = metrics_for_defer_mask(task_stats, use_fallback[mask])
+    if not task_rows:
+        return
+    row["source_task_metrics"] = task_rows
+    row["max_task_losses_vs_prediction_stability"] = max(
+        int(metrics.get("losses_vs_prediction_stability", 0))
+        for metrics in task_rows.values()
+    )
+    row["max_task_prediction_mismatch_vs_prediction_stability"] = max(
+        int(metrics.get("prediction_mismatch_vs_prediction_stability", 0))
+        for metrics in task_rows.values()
+    )
+    row["max_task_defer_rate"] = max(float(metrics.get("defer_rate", 0.0)) for metrics in task_rows.values())
+    row["mean_task_avg_blocks"] = sum(float(metrics.get("avg_blocks", 0.0)) for metrics in task_rows.values()) / max(
+        len(task_rows),
+        1,
+    )
 
 
 def metrics_for_defer_mask(
@@ -658,6 +727,12 @@ def select_pair(
             for pair in pairs
             if float(pair["valid"]["avg_blocks"]) <= action_avg_blocks + 0.10
         ]
+    elif mode == "task_robust_cost_limited":
+        eligible = [
+            pair
+            for pair in pairs
+            if float(pair["valid"]["avg_blocks"]) <= action_avg_blocks + 0.10
+        ]
     return min(eligible or pairs, key=lambda pair: rank_row(pair["valid"], mode="safety" if mode == "cost_limited" else mode))
 
 
@@ -694,6 +769,32 @@ def rank_row(row: dict[str, Any], *, mode: str) -> tuple[float, ...]:
             -float(row.get("rescued_action_losses", 0.0)),
             float(row.get("threshold", 0.0)),
         )
+    if mode == "task_robust_safety":
+        return (
+            float(row.get("max_task_losses_vs_prediction_stability", row.get("losses_vs_prediction_stability", 0.0))),
+            float(
+                row.get(
+                    "max_task_prediction_mismatch_vs_prediction_stability",
+                    row.get("prediction_mismatch_vs_prediction_stability", 0.0),
+                )
+            ),
+            float(row.get("max_task_defer_rate", row.get("defer_rate", 0.0))),
+            float(row.get("avg_blocks", 0.0)),
+            -float(row.get("rescued_action_losses", 0.0)),
+        )
+    if mode == "task_robust_cost_limited":
+        return (
+            float(row.get("max_task_losses_vs_prediction_stability", row.get("losses_vs_prediction_stability", 0.0))),
+            float(row.get("avg_blocks", 0.0)),
+            float(
+                row.get(
+                    "max_task_prediction_mismatch_vs_prediction_stability",
+                    row.get("prediction_mismatch_vs_prediction_stability", 0.0),
+                )
+            ),
+            float(row.get("max_task_defer_rate", row.get("defer_rate", 0.0))),
+            -float(row.get("rescued_action_losses", 0.0)),
+        )
     raise ValueError(f"unknown mode: {mode}")
 
 
@@ -717,8 +818,12 @@ def build_readout(aggregate: dict[str, dict[str, Any]]) -> list[str]:
         "source_valid_cost_selected_gate",
         "source_valid_cost_limited_selected_gate",
         "source_valid_safety_selected_gate",
+        "source_valid_task_robust_cost_limited_gate",
+        "source_valid_task_robust_safety_gate",
         "source_valid_constrained_cost_limited_gate",
         "source_valid_constrained_safety_gate",
+        "source_valid_task_robust_constrained_cost_limited_gate",
+        "source_valid_task_robust_constrained_safety_gate",
         "best_test_gate_under_action_plus_0p10_blocks",
         "best_test_constrained_under_action_plus_0p10_blocks",
     ]:

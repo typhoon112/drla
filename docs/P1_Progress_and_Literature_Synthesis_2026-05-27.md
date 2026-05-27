@@ -272,6 +272,16 @@ constrained two-stage selector 结果：
 | source-valid constrained cost-limited | `0 / 98 / 1.882` | 比 scalar cost-limited 少 `5` mismatches，但 block 多 `0.006`；仍只是与 v2 持平附近 |
 | test constrained tight-cost diagnostic | `23 / 113 / 1.758` | 比 scalar tight-cost 好，但仍差于 v2 `15 / 99 / 1.769` |
 
+source-task-robust selector 结果：
+
+| Policy | result losses / mismatches / blocks | 结论 |
+|---|---:|---|
+| source-valid task-robust safety | `0 / 28 / 2.663` | 与 pooled safety 相同，说明 safety 点主要还是 always-defer-like |
+| source-valid task-robust cost-limited | `0 / 93 / 1.876` | 当前四任务 deployable 最好点；超过 old v2 cost-limited `0 / 103 / 1.880` |
+| source-valid task-robust constrained cost-limited | `0 / 103 / 1.873` | 更便宜但 mismatch 回到 pooled scalar 水平 |
+
+这里的 task-robust 指：阈值仍只用 source validation 选择，但排序时先看 source tasks 的 worst-case loss/mismatch/defer，而不是 pooled source-valid 总体指标。它没有使用 held-out test 作为选择信号。
+
 Head diagnostics 暴露了核心问题：
 
 | Held-out task | rescue positives / AUPRC / top5% recall | mismatch positives / AUPRC / top5% recall | cost head |
@@ -283,8 +293,8 @@ Head diagnostics 暴露了核心问题：
 
 Source-valid 与 held-out test 的事件分布漂移很明显：例如 MMLU source-valid 中 rescue/mismatch rescue positives 分别是 `215/905`，但 held-out test 只有 `0/5`；OBQA test 两类 rescue 都是 `0`，但 heads 仍给出较高 mean probability。也就是说，当前 source-valid calibration 会把其他任务的 rare-boundary 频率外推到 held-out task，导致过度 defer。
 
-结论：简单 post-hoc 标量 utility-weight calibration 不能把 decomposed heads 转成优于 v2 的策略；constrained selector 只带来小幅改善，说明 selector 形式不是唯一瓶颈。head 中有可用信号，因为 source-valid safety 仍能做到 `0` losses，HellaSwag mismatch rescue 也有排序能力；但当前 scalar student heads 的概率不可靠、跨任务分布漂移大、MMLU/OBQA 上几乎没有可救事件。下一步不应继续扫相同权重网格，而应转向：
+结论：简单 post-hoc 标量 utility-weight calibration 不能把 decomposed heads 转成优于 v2 的策略；constrained selector 只带来小幅改善，说明 selector 形式不是唯一瓶颈。task-robust risk calibration 是一个值得继续验证的改进，因为它在四任务 deployable cost-limited 口径上超过 old v2，但这只是 partial，不足以重新启动主线结论。head 中有可用信号，因为 source-valid safety 仍能做到 `0` losses，HellaSwag mismatch rescue 也有排序能力；但当前 scalar student heads 的概率不可靠、跨任务分布漂移大、MMLU/OBQA 上几乎没有可救事件。下一步应先补完 remaining held-out tasks，再决定是否把 risk-controlled calibration 作为正式方向：
 
-1. 显式的 constrained frontier learner：先保证 correctness/harm，再在安全 frontier 内处理 mismatch/cost。
-2. 更丰富的 latent/process interaction：不要只依赖 action student 的少量 scalar heads。
-3. 更严格的校准评估：报告每个 head 的 reliability / ECE、任务间阈值漂移、以及 rare rescue 的召回率。
+1. 补跑 RACE/SIQA/SQuAD/StoryCloze 的 `decomposed_expected_utility` formal runs，必须 SwanLab cloud + CUDA。
+2. 用同一个 local-only calibration script 重新聚合 official8，比较 pooled、constrained、task-robust 与 old v2。
+3. 若 task-robust 在 official8 仍成立，再把 risk-controlled calibration 正式纳入主线；否则转向更丰富 latent/process interaction，不再继续扫 selector。
