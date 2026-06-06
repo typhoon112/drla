@@ -1,0 +1,265 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://drla.local/schemas/p2_phase_c_manifest_schema.json",
+  "title": "DRLA P2 Phase C benchmark manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifest_version",
+    "protocol_version",
+    "created_at_utc",
+    "families",
+    "samples"
+  ],
+  "properties": {
+    "manifest_version": {
+      "type": "string",
+      "const": "p2_phase_c_manifest_v0"
+    },
+    "protocol_version": {
+      "type": "string"
+    },
+    "created_at_utc": {
+      "type": "string"
+    },
+    "split_seed": {
+      "type": "integer"
+    },
+    "families": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": [
+          "evidence_split_qa",
+          "distributed_state_synthesis",
+          "code_workflow"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "samples": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/sample"
+      }
+    }
+  },
+  "$defs": {
+    "sample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sample_id",
+        "family",
+        "task_name",
+        "split",
+        "source",
+        "question",
+        "agent_views",
+        "scoring",
+        "leakage_audit",
+        "baselines_required"
+      ],
+      "properties": {
+        "sample_id": {
+          "type": "string"
+        },
+        "family": {
+          "type": "string",
+          "enum": [
+            "evidence_split_qa",
+            "distributed_state_synthesis",
+            "code_workflow"
+          ]
+        },
+        "task_name": {
+          "type": "string"
+        },
+        "split": {
+          "type": "string",
+          "enum": [
+            "calibration",
+            "heldout",
+            "train",
+            "valid",
+            "test"
+          ]
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "version"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            },
+            "url": {
+              "type": "string"
+            },
+            "source_sample_id": {
+              "type": "string"
+            }
+          }
+        },
+        "question": {
+          "type": "string"
+        },
+        "public_context": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "agent_views": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/agent_view"
+          }
+        },
+        "scoring": {
+          "$ref": "#/$defs/scoring"
+        },
+        "leakage_audit": {
+          "$ref": "#/$defs/leakage_audit"
+        },
+        "baselines_required": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "single_q_only",
+              "single_full_info",
+              "textmas_matched",
+              "textmas_no_message",
+              "textmas_shuffled_message",
+              "textmas_wrong_evidence_or_wrong_shard",
+              "textmas_compressed_state"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "metadata": {
+          "type": "object"
+        }
+      }
+    },
+    "agent_view": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "agent_id",
+        "role",
+        "private_observation",
+        "allowed_output_contract",
+        "forbidden_fields"
+      ],
+      "properties": {
+        "agent_id": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "private_observation": {
+          "type": "string"
+        },
+        "allowed_output_contract": {
+          "type": "string"
+        },
+        "forbidden_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "contains": {
+            "const": "gold_answer"
+          }
+        }
+      }
+    },
+    "scoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "gold_answer"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "exact_match",
+            "normalized_f1",
+            "multiple_choice",
+            "unit_test",
+            "custom"
+          ]
+        },
+        "gold_answer": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "array",
+            "object"
+          ]
+        },
+        "answer_aliases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "unit_tests": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "custom_scorer": {
+          "type": "string"
+        }
+      }
+    },
+    "leakage_audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gold_in_online_prompt",
+        "scorer_output_in_online_prompt",
+        "full_evidence_available_to_split_agent",
+        "heldout_used_for_prompt_repair"
+      ],
+      "properties": {
+        "gold_in_online_prompt": {
+          "type": "boolean",
+          "const": false
+        },
+        "scorer_output_in_online_prompt": {
+          "type": "boolean",
+          "const": false
+        },
+        "full_evidence_available_to_split_agent": {
+          "type": "boolean",
+          "const": false
+        },
+        "heldout_used_for_prompt_repair": {
+          "type": "boolean",
+          "const": false
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

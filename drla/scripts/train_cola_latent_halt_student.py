@@ -160,7 +160,7 @@ class LatentHaltStudentTrainConfig:
     readiness_target_mode: str = "oracle_frontier"
     teacher_decisions_jsonl: str = ""
     selection_metric: str = "readiness_auroc"
-    valid_interval: int = 50
+    valid_interval: int = 10
     num_workers: int = 0
     device: str = "auto"
     swanlab_mode: str = "cloud"
@@ -609,8 +609,8 @@ def validate_config(config: LatentHaltStudentTrainConfig) -> None:
     parse_tasks(config.tasks)
     if config.swanlab_mode != "cloud":
         raise ValueError("all deep-learning training experiments must use SwanLab cloud")
-    if config.valid_interval > 100:
-        raise ValueError("valid_interval must be <= 100 steps")
+    if config.valid_interval > 10:
+        raise ValueError("valid_interval must be <= 10 steps")
     if config.pooling_mode not in {"pma4_last", "pma1", "mean_max", "all_tokens"}:
         raise ValueError("unknown pooling_mode")
     if config.task_conditioning not in {"none", "query", "embedding"}:

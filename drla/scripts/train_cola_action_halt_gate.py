@@ -92,7 +92,7 @@ class ActionHaltGateTrainConfig:
     utility_weight_scale: float = 20.0
     utility_temperature: float = 1.0
     checkpoint_selection: str = "auprc"
-    valid_interval: int = 50
+    valid_interval: int = 10
     num_workers: int = 0
     device: str = "auto"
     swanlab_mode: str = "cloud"
@@ -1195,8 +1195,8 @@ def validate_config(config: ActionHaltGateTrainConfig) -> None:
     parse_tasks(config.heldout_task)
     if config.heldout_task not in OFFICIAL_COLA_TASKS:
         raise ValueError("heldout_task must be one official Cola task")
-    if config.valid_interval > 100:
-        raise ValueError("valid_interval must be <= 100 steps")
+    if config.valid_interval > 10:
+        raise ValueError("valid_interval must be <= 10 steps")
     if config.validation_source not in {"train_stratified", "train_boundary_stratified", "official_valid"}:
         raise ValueError("validation_source must be train_stratified, train_boundary_stratified, or official_valid")
     for name, value in {

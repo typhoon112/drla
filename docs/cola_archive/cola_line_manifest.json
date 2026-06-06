@@ -1,0 +1,94 @@
+{
+  "updated_at": "2026-06-06",
+  "workspace": "/data1/luyifei/drla",
+  "status": "cola_p0_p1_archived_p2_diagnostic_frozen",
+  "official8_tasks": [
+    "lambada",
+    "mmlu",
+    "obqa",
+    "hellaswag",
+    "race",
+    "siqa",
+    "squad",
+    "story_cloze"
+  ],
+  "canonical_docs": {
+    "archive_readme": "/data1/luyifei/drla/docs/cola_archive/README.md",
+    "p0_repro": "/data1/luyifei/drla/docs/cola_archive/P0_Adaptive_Halt_Reproducibility.md",
+    "p1_repro": "/data1/luyifei/drla/docs/cola_archive/P1_Latent_Halt_Student_Reproducibility.md",
+    "manifest": "/data1/luyifei/drla/docs/cola_archive/CODE_AND_ARTIFACT_MANIFEST.md",
+    "p2_freeze": "/data1/luyifei/drla/docs/cola_archive/P2_CoLA_Line_Freeze_Notes.md",
+    "p0_report_zh": "/data1/luyifei/drla/docs/p0_reports/cola_adaptive_halt_paper_report_zh.md",
+    "p1_model_report": "/data1/luyifei/drla/docs/p1_archive/P1_Model_Comparison_Report_2026-05-27.md"
+  },
+  "official_cola_baseline": {
+    "summary_seed66": "/data1/luyifei/drla/outputs/cola_official_benchmarks/full_b64_bs12_trace_score_20260524/summary.json",
+    "summary_seed67": "/data1/luyifei/drla/outputs/cola_official_benchmarks/full_b64_bs12_seed67_trace_score_20260524/summary.json",
+    "summary_seed68": "/data1/luyifei/drla/outputs/cola_official_benchmarks/full_b64_bs12_seed68_trace_score_20260524/summary.json",
+    "task_average_accuracy_percent_mean": 25.07
+  },
+  "p0_adaptive_halt_teacher": {
+    "summary": "/data1/luyifei/drla/outputs/cola_experiment_summaries/official8_full_b64_bs12_cross_task_joint_readiness_riskcap04_cross_seed_20260524/summary.json",
+    "policy": "joint-readiness + prediction-change risk + riskcap04 + contentful/single-choice guards",
+    "num_seeds": 3,
+    "num_samples_per_seed": 49019,
+    "fixed_final_accuracy": 0.21592987753048137,
+    "prediction_stability_accuracy": 0.21595707786776555,
+    "risk_gated_accuracy": 0.2159638779520866,
+    "prediction_stability_avg_blocks": 2.5116247441468276,
+    "risk_gated_avg_blocks": 2.1179270622955726,
+    "block_saving_vs_prediction_stability": 0.3936976818512549,
+    "losses_vs_prediction_stability_all_seeds": 0,
+    "interpretation": "teacher/upper-bound diagnostic; not decoder-free and not benchmark accuracy improvement"
+  },
+  "p1_best_latent_halt_student": {
+    "summary": "/data1/luyifei/drla/outputs/cola_experiment_summaries/official8_full_b64_bs12_p1_trajtok_answer_identity_action_completionrisk_identitystable_boundarypen02_cross_seed_20260527/summary.json",
+    "architecture": "LatentHaltStudent-v1 d64 PMA4 trajectory_token answer_identity_action completion_risk answer_identity_stability boundarypen02",
+    "num_eval_summaries": 120,
+    "num_samples_repeated": 73645,
+    "selected_accuracy": 0.225283454409668,
+    "fixed_accuracy": 0.2253377690270894,
+    "prediction_stability_accuracy": 0.2253377690270894,
+    "selected_avg_blocks": 1.8120850056946032,
+    "prediction_stability_avg_blocks": 2.50797745943377,
+    "block_saving_vs_prediction_stability": 0.6958924537391671,
+    "losses_vs_prediction_stability_total": 4,
+    "mismatches_vs_prediction_stability_total": 606,
+    "checkpoint_roots": [
+      "/data1/luyifei/drla/outputs/cola_latent_halt_student_ablation/cross_task_full_b64_bs12_seed66_d64_pma4_trajtok_answer_identity_action_completionrisk_identitystable_20260527",
+      "/data1/luyifei/drla/outputs/cola_latent_halt_student_ablation/cross_task_full_b64_bs12_seed67_d64_pma4_trajtok_answer_identity_action_completionrisk_identitystable_20260527",
+      "/data1/luyifei/drla/outputs/cola_latent_halt_student_ablation/cross_task_full_b64_bs12_seed68_d64_pma4_trajtok_answer_identity_action_completionrisk_identitystable_20260527"
+    ],
+    "best_route_checkpoint_count": 24,
+    "interpretation": "decoder-supervised but decoder-free online latent/process student"
+  },
+  "p1_locked_riskcert": {
+    "summary": "/data1/luyifei/drla/outputs/cola_experiment_summaries/official8_full_b64_bs12_p1_locked_seed66_67_68_split20260601_riskcert_20260527/summary.json",
+    "num_eval_summaries": 24,
+    "num_samples_repeated": 14940,
+    "selected_accuracy": 0.20930388219544846,
+    "fixed_accuracy": 0.20950468540829986,
+    "prediction_stability_accuracy": 0.20957161981258368,
+    "selected_avg_blocks": 1.8339357354953745,
+    "prediction_stability_avg_blocks": 2.5011378848728247,
+    "losses_vs_prediction_stability_total": 4,
+    "mismatches_vs_prediction_stability_total": 91,
+    "calibration_joint_risk_satisfied": "21/24",
+    "interpretation": "fresh split locked observed-low-risk audit; not full formal certification"
+  },
+  "script_entrypoints": {
+    "prepare_benchmarks": "/data1/luyifei/drla/drla/scripts/prepare_cola_official_benchmarks.py",
+    "collect_traces": "/data1/luyifei/drla/drla/scripts/collect_cola_block_traces.py",
+    "p0_train_readiness": "/data1/luyifei/drla/drla/scripts/train_cola_readiness_model.py",
+    "p0_train_risk": "/data1/luyifei/drla/drla/scripts/train_cola_continuation_risk_model.py",
+    "p0_eval": "/data1/luyifei/drla/drla/scripts/eval_cola_risk_gated_halt.py",
+    "p1_train": "/data1/luyifei/drla/drla/scripts/train_cola_latent_halt_student.py",
+    "p1_eval": "/data1/luyifei/drla/drla/scripts/eval_cola_latent_halt_student.py",
+    "p1_aggregate": "/data1/luyifei/drla/drla/scripts/aggregate_cola_latent_halt_student_subseed_loto.py"
+  },
+  "rules": {
+    "deep_learning_training": "GPU/CUDA only, SwanLab cloud, metrics.jsonl, best_checkpoint.pt, last_checkpoint.pt",
+    "eval_and_aggregation": "local-only, SwanLab disabled",
+    "p1_reporting": "use best_checkpoint.pt and same-split halt comparison; do not claim official benchmark accuracy improvement"
+  }
+}

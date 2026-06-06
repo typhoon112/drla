@@ -83,7 +83,7 @@ class ReadinessTrainConfig:
     dropout: float = 0.1
     hidden_dim: int = 192
     signal_mode: str = "full"
-    valid_interval: int = 50
+    valid_interval: int = 10
     num_workers: int = 0
     device: str = "auto"
     swanlab_mode: str = "cloud"
@@ -131,8 +131,8 @@ class ReadinessModel(nn.Module):
 def train_readiness_model(config: ReadinessTrainConfig) -> dict[str, Any]:
     if config.signal_mode not in {"full", "process_only", "process_no_task", "latent_only"}:
         raise ValueError("signal_mode must be one of: full, process_only, process_no_task, latent_only")
-    if config.valid_interval > 100:
-        raise ValueError("valid_interval must be <= 100 steps")
+    if config.valid_interval > 10:
+        raise ValueError("valid_interval must be <= 10 steps")
     if not 0 < config.train_ratio < 1:
         raise ValueError("train_ratio must be in (0, 1)")
     if not 0 <= config.valid_ratio < 1:

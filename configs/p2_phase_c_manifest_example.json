@@ -1,0 +1,139 @@
+{
+  "manifest_version": "p2_phase_c_manifest_v0",
+  "protocol_version": "example_not_experiment_v0",
+  "created_at_utc": "2026-06-01T00:00:00Z",
+  "split_seed": 20260601,
+  "families": [
+    "distributed_state_synthesis"
+  ],
+  "samples": [
+    {
+      "sample_id": "example_calibration_not_experiment_0001",
+      "family": "distributed_state_synthesis",
+      "task_name": "example_color_join_not_experiment",
+      "split": "calibration",
+      "source": {
+        "name": "manual_schema_example",
+        "version": "v0",
+        "source_sample_id": "example_0001"
+      },
+      "question": "Which color is implied by combining the two private clues?",
+      "public_context": "Two agents each hold one clue. The final solver must combine both clues.",
+      "agent_views": [
+        {
+          "agent_id": "agent_a",
+          "role": "clue_holder_a",
+          "private_observation": "The answer is associated with a clear daytime sky.",
+          "allowed_output_contract": "Output only the clue summary, not a final answer.",
+          "forbidden_fields": [
+            "gold_answer",
+            "scorer_output",
+            "full_evidence"
+          ]
+        },
+        {
+          "agent_id": "agent_b",
+          "role": "clue_holder_b",
+          "private_observation": "The answer is not red, green, yellow, black, or white.",
+          "allowed_output_contract": "Output only the clue summary, not a final answer.",
+          "forbidden_fields": [
+            "gold_answer",
+            "scorer_output",
+            "full_evidence"
+          ]
+        }
+      ],
+      "scoring": {
+        "type": "exact_match",
+        "gold_answer": "blue",
+        "answer_aliases": [
+          "the color blue"
+        ]
+      },
+      "leakage_audit": {
+        "gold_in_online_prompt": false,
+        "scorer_output_in_online_prompt": false,
+        "full_evidence_available_to_split_agent": false,
+        "heldout_used_for_prompt_repair": false,
+        "notes": "Schema example only; not an experimental sample."
+      },
+      "baselines_required": [
+        "single_q_only",
+        "single_full_info",
+        "textmas_matched",
+        "textmas_no_message",
+        "textmas_shuffled_message",
+        "textmas_wrong_evidence_or_wrong_shard",
+        "textmas_compressed_state"
+      ],
+      "metadata": {
+        "is_schema_example": true,
+        "use_for_experiment": false
+      }
+    },
+    {
+      "sample_id": "example_heldout_not_experiment_0002",
+      "family": "distributed_state_synthesis",
+      "task_name": "example_color_join_not_experiment",
+      "split": "heldout",
+      "source": {
+        "name": "manual_schema_example",
+        "version": "v0",
+        "source_sample_id": "example_0002"
+      },
+      "question": "Which color is implied by combining the two private clues?",
+      "public_context": "Two agents each hold one clue. The final solver must combine both clues.",
+      "agent_views": [
+        {
+          "agent_id": "agent_a",
+          "role": "clue_holder_a",
+          "private_observation": "The answer is associated with ripe strawberries.",
+          "allowed_output_contract": "Output only the clue summary, not a final answer.",
+          "forbidden_fields": [
+            "gold_answer",
+            "scorer_output",
+            "full_evidence"
+          ]
+        },
+        {
+          "agent_id": "agent_b",
+          "role": "clue_holder_b",
+          "private_observation": "The answer is not blue, green, yellow, black, or white.",
+          "allowed_output_contract": "Output only the clue summary, not a final answer.",
+          "forbidden_fields": [
+            "gold_answer",
+            "scorer_output",
+            "full_evidence"
+          ]
+        }
+      ],
+      "scoring": {
+        "type": "exact_match",
+        "gold_answer": "red",
+        "answer_aliases": [
+          "the color red"
+        ]
+      },
+      "leakage_audit": {
+        "gold_in_online_prompt": false,
+        "scorer_output_in_online_prompt": false,
+        "full_evidence_available_to_split_agent": false,
+        "heldout_used_for_prompt_repair": false,
+        "notes": "Schema example only; not an experimental sample."
+      },
+      "baselines_required": [
+        "single_q_only",
+        "single_full_info",
+        "textmas_matched",
+        "textmas_no_message",
+        "textmas_shuffled_message",
+        "textmas_wrong_evidence_or_wrong_shard",
+        "textmas_compressed_state"
+      ],
+      "metadata": {
+        "is_schema_example": true,
+        "use_for_experiment": false
+      }
+    }
+  ]
+}

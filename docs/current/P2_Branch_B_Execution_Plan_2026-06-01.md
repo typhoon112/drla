@@ -1,0 +1,442 @@
+# P2 Branch B 执行锁定方案
+
+更新日期：2026-06-01
+
+> 状态：历史 Branch B Family 1 执行方案。该路线已执行到
+> official8-compatible calibration 与 native prompt/eval alignment audit，并以
+> `admitted_tasks=[]` 停止。当前下一步以
+> `/data1/luyifei/drla/docs/current/P2_Post_Family1_Complete_Execution_Plan_2026-06-01.md`
+> 为准；本文只保留 Family 1 的执行边界、数据口径和 stop condition。
+
+## 1. 核心结论
+
+当前 official CoLA 架构适合作为 same-substrate latent communication 的
+substrate：
+
+```text
+Text VAE: text <-> continuous latent sequence
+Block-causal DiT: latent-space generation / reasoning dynamics
+Same official CoLA A/B: A latent packet 原则上可被 B 的同构 substrate 消费
+```
+
+但当前 official CoLA 权重不自动满足 ARC/GSM8K/GPQA/MedQA/EvalPlus 等新
+benchmark。P2-D1/D3/D3.1/D3.2 已经显示：
+
+```text
+7-task candidate set admitted_tasks = []
+prompt-only / answer-state repair 仍未让 Role TextMAS 过 gate
+```
+
+因此后续不能在这些任务上直接比较 latent-vs-text，也不能把低分解释为
+latent communication 失败。当时默认路线是先做 Branch B：
+
+```text
+保留 frozen official CoLA
+-> 构造 CoLA 能力匹配的 role-conditioned candidate tasks
+-> 先过 Single CoLA Solver + Role TextMAS gate
+-> 只在 admitted tasks 上做 text-vs-latent MAS 主实验
+```
+
+## 2. 不再做什么
+
+这些操作会扰乱后续实验，默认禁止：
+
+```text
+在 admitted_tasks=[] 的 benchmark 上跑 latent-vs-text 主表
+把 official8 solver-to-solver message_only 当真实 MAS 证据
+把 Agent-A decoded replay tokens 拼进 scorer-visible final generate
+把 selected_prediction / scorer output / gold answer 当 Agent-A message
+用 held-out 做 prompt/protocol repair
+用小样本 smoke result 得出科学结论
+训练 fuser/adapter 来掩盖 benchmark/base-capability 未过 gate 的问题
+把无训练过程的 eval 脚本上传 SwanLab
+```
+
+## 3. Branch B 数据范围
+
+第一轮只使用 official8-compatible role candidates：
+
+```text
+obqa
+mmlu
+race
+hellaswag
+siqa
+story_cloze
+```
+
+原因：
+
+```text
+这些任务来自 official CoLA 已有 benchmark 数据格式。
+它们最适合检验 frozen CoLA 是否能承载 role-conditioned protocol。
+它们不是最终最强 true-MAS claim，只是 capability-matched bridge。
+```
+
+暂不作为默认：
+
+```text
+squad:
+  short-answer/extractive parsing 与 role-state interface 需要单独规则。
+
+lambada:
+  next-word completion 太接近语言建模，不适合作为第一轮 MAS role gate。
+```
+
+当前准备好的数据：
+
+```text
+script:
+  /data1/luyifei/drla/drla/scripts/prepare_cola_p2_official8_role_candidates.py
+
+full output:
+  /data1/luyifei/drla/outputs/p2_benchmark_redesign/
+  official8_role_candidates_20260601
+
+combined jsonl:
+  /data1/luyifei/drla/outputs/p2_benchmark_redesign/
+  official8_role_candidates_20260601/p2_official8_role_candidates.jsonl
+
+rows:
+  official8_obqa = 500
+  official8_mmlu = 14042
+  official8_race = 4887
+  official8_hellaswag = 10042
+  official8_siqa = 1954
+  official8_story_cloze = 1871
+  total = 33296
+
+schema check:
+  multiple_choice rows = 33296
+  bad ground_truth / choices rows = 0
+```
+
+Smoke artifact：
+
+```text
+/data1/luyifei/drla/outputs/p2_benchmark_redesign/
+official8_role_candidates_smoke_20260601
+
+2 samples per task, schema-only check, not a scientific result.
+```
+
+## 4. Agent Baseline
+
+主协议必须是 role-conditioned MAS，而不是同质 solver-to-solver：
+
+```text
+Planner -> Critic -> Refiner -> Solver
+```
+
+每个下游 role 可以看到原始问题 `q`。这不是泄漏，因为相关文献中的
+sequential MAS 和 latent working-memory transfer 都保留了任务上下文。
+泄漏是：
+
+```text
+scorer or Agent B sees gold/scorer output
+Agent B sees selected_prediction
+Agent B receives decoded replay text as final answer
+scorer-visible final output includes Agent A tokens rather than only B output
+```
+
+第一轮 role contract：
+
+```text
+Planner(q):
+  produce compact option/evidence state.
+
+Critic(q, planner_state):
+  identify invalid option(s), missing evidence, or uncertainty.
+
+Refiner(q, planner_state, critic_state):
+  produce refined compact answer state.
+
+Solver(q, refined_state):
+  output final answer only.
+```
+
+## 5. Gate Protocol
+
+每个 task 独立准入，不做全局平均偷换。
+
+Calibration gate：
+
+```text
+Single CoLA Solver:
+  q -> answer
+
+Role TextMAS:
+  Planner(q) -> Critic(q, planner_text_state)
+  -> Refiner(q, states) -> Solver(q, final_text_state) -> answer
+```
+
+准入条件：
+
+```text
+nonempty_rate >= 0.95
+parseable_rate >= 0.90
+accuracy > random/task floor + margin
+single_gate_pass = true
+role_textmas_gate_pass = true
+not a smoke run
+no gold/scorer/selected_prediction in prompts
+```
+
+Held-out gate：
+
+```text
+只有 calibration 过 gate 的 task/protocol 才能进入 held-out。
+held-out 上不能再调 prompt、parser、threshold、budget 或 role contract。
+held-out 过 gate 后，task 才能进入 P2 text-vs-latent 主实验。
+```
+
+## 6. Text-vs-Latent 主实验
+
+只对 held-out admitted tasks 运行。
+
+必须比较：
+
+```text
+Single:
+  q -> Solver -> final answer
+
+TextMAS:
+  q + role prompts + text states -> final Solver output
+
+LatentMAS no-fuser:
+  q + role prompts + A latent working memory -> B/next role -> final output
+
+Corrupt controls:
+  metadata_only, wrong_sample, same_task_wrong_sample, wrong_block, shuffle,
+  noise, rotation
+```
+
+Latent packet 优先级：
+
+```text
+context_plus_thought / full_working_memory:
+  canonical protocol
+
+thought_only:
+  ablation only
+```
+
+Scorer 边界：
+
+```text
+score only final Solver output generated by receiver/last role.
+Never score Agent-A text tokens or decoded latent replay tokens.
+```
+
+最低继续条件：
+
+```text
+latent_matched > corrupt controls under paired comparison
+latent_matched >= none or has clear paired utility signal
+failure taxonomy explains text-vs-latent gap
+```
+
+若 latent 弱于 text 但强于 corrupt：
+
+```text
+结论是 latent carries usable signal but interface is not competitive yet。
+这时才允许讨论 fuser/adapter。
+```
+
+## 7. Fuser / Adapter 触发条件
+
+不能因为“latent 分布看起来差不多”就训练 fuser，也不能在 gate 未过时训练
+fuser 来救 benchmark。
+
+只有满足以下条件之一才触发：
+
+```text
+held-out admitted task 上 no-fuser latent 稳定强于 corrupt 但弱于 TextMAS
+wrong_block / same-task wrong-sample 异常强，说明接口无法区分 payload
+full_working_memory 可用而 thought_only 不可用，需要 learned fusion
+```
+
+训练规范：
+
+```text
+CUDA only
+SwanLab cloud
+metrics.jsonl
+valid_interval <= 10 step
+best_checkpoint.pt
+last_checkpoint.pt
+```
+
+可用监督：
+
+```text
+matched-vs-corrupt contrastive labels
+TextMAS teacher hidden/logit/state distillation
+P1/P0 readiness/certification signals
+decoder/probe signals as offline labels only
+```
+
+线上禁止：
+
+```text
+decoded A replay text
+gold answer
+scorer output
+selected_prediction
+```
+
+## 8. 如果 Branch B 失败
+
+Branch B stop conditions：
+
+```text
+no official8-compatible role task passes calibration gate
+calibration passes but held-out fails
+only passing tasks are too trivial for meaningful communication evidence
+role pass depends on parser hacks or leakage
+```
+
+失败后不能继续 prompt-tuning。必须回到分支选择：
+
+```text
+Branch A:
+  CoLA substrate adaptation for target benchmarks.
+  适合 ARC/GPQA/MedQA/GSM8K/EvalPlus 是非退让目标的情况。
+
+Branch C:
+  external capable TextMAS first.
+  适合先验证 benchmark/protocol 是否自然，再回到 CoLA latent adapter。
+```
+
+## 9. Artifact 纪律
+
+每个 Branch B 阶段必须保存：
+
+```text
+manifest.json
+candidate jsonl path
+split seed
+calibration/held-out counts
+prompt/protocol version
+parser/scorer version
+exact command
+metrics.jsonl
+summary.json
+task_summary.csv where applicable
+leakage audit result
+conclusion boundary
+```
+
+纯数据准备 / eval：
+
+```text
+swanlab_mode=disabled
+no optimizer
+no backward
+no SwanLab cloud run
+```
+
+训练：
+
+```text
+GPU/CUDA required
+SwanLab cloud required
+best + last checkpoints required
+```
+
+## 10. 下一步清单
+
+```text
+1. 为 official8_role_candidates_20260601 建 deterministic calibration/held-out split。
+2. 在 calibration split 上运行 Single + Role TextMAS gate。
+3. 只对 calibration pass 的 task/protocol 运行 held-out locked gate。
+4. 若有 admitted tasks，进入 corrected TextMAS vs LatentMAS 主实验。
+5. 若无 admitted tasks，停止 Branch B，转入 Branch A/C 决策。
+```
+
+当前可以安全继续的是第 1 步和第 2 步的 calibration-only gate。当前仍禁止
+held-out 主表、latent-vs-text 主表和任何 fuser/adapter 训练。
+
+## 11. 2026-06-01 Calibration Readout
+
+First Branch B calibration report：
+
+```text
+/data1/luyifei/drla/docs/current/
+P2_Branch_B_Calibration_Report_2026-06-01.md
+```
+
+Current result：
+
+```text
+official8-compatible calibration admitted_tasks = []
+held-out remains untouched
+```
+
+Important update：
+
+```text
+The next step is no longer to run Role TextMAS or latent-vs-text directly.
+First perform an official CoLA prompt/eval alignment audit.
+```
+
+Reason：
+
+```text
+Across generic_v1, answer_state_structured_v1, and cola_fewshot_v1, most
+Single Solver calibration rows fail either accuracy or parseability gates.
+The only marginal all-task single pass, official8_mmlu under generic_v1, did
+not reproduce in a task-isolated split-prompt gate.
+```
+
+Operational consequence：
+
+```text
+Do not run held-out gate, P2 main table, or fuser/adapter training until a
+task-isolated calibration gate has a robust Single + Role pass.
+```
+
+## 12. Official8 Native Alignment Audit
+
+Native audit report：
+
+```text
+/data1/luyifei/drla/docs/current/
+P2_Official8_Native_Alignment_Audit_2026-06-01.md
+```
+
+Current result：
+
+```text
+official8 native Single Solver calibration admitted_tasks = []
+```
+
+Interpretation：
+
+```text
+The normalized P2 gate was not the only issue. Even with official CoLA's
+native task templates and acc_calc-style scoring, no Family 1 task clears the
+current calibration gate.
+```
+
+Family 1 stop condition：
+
+```text
+official8-compatible role candidates should not continue to held-out, Role
+TextMAS main evaluation, latent-vs-text comparison, or fuser training.
+```
+
+Next branch decision：
+
+```text
+Branch A:
+  adapt the CoLA substrate for target benchmarks.
+
+Branch C:
+  validate MAS benchmark/protocol with external capable text agents before
+  returning to CoLA latent.
+
+Branch B Family 2:
+  only if a genuinely decomposable official8-derived task first obtains a
+  robust native Single Solver calibration pass.
+```

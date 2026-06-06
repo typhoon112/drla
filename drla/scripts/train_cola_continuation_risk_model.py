@@ -99,7 +99,7 @@ class ContinuationRiskTrainConfig:
     hidden_dim: int = 96
     signal_mode: str = "process_no_task"
     target_mode: str = "strict_prefix"
-    valid_interval: int = 50
+    valid_interval: int = 10
     num_workers: int = 0
     device: str = "auto"
     swanlab_mode: str = "cloud"
@@ -129,8 +129,8 @@ def train_continuation_risk_model(config: ContinuationRiskTrainConfig) -> dict[s
         raise ValueError("signal_mode must be one of: process, process_no_task")
     if config.target_mode not in {"strict_prefix", "prediction_change"}:
         raise ValueError("target_mode must be one of: strict_prefix, prediction_change")
-    if config.valid_interval > 100:
-        raise ValueError("valid_interval must be <= 100 steps")
+    if config.valid_interval > 10:
+        raise ValueError("valid_interval must be <= 10 steps")
     if not 0 < config.train_ratio < 1:
         raise ValueError("train_ratio must be in (0, 1)")
     if not 0 <= config.valid_ratio < 1:
