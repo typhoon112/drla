@@ -1,6 +1,6 @@
 # Current Experiment Status
 
-Last updated: 2026-06-06
+Last updated: 2026-06-18
 
 > 状态：当前快照。瘦身前完整历史流水见 `/data1/luyifei/drla/docs/full_history/2026-05-29_pre_slim/CURRENT_EXPERIMENT_STATUS.md`。
 
@@ -8,20 +8,22 @@ Last updated: 2026-06-06
 
 ```text
 docs/DOCS_INDEX.md: 文档系统入口
-docs/current/P2_Latent_MAS_Communication_Implementation_Plan_2026-05-29.md: 当前 P2 canonical
-docs/current/P2_Benchmark_and_Agent_Baseline_Redesign_2026-06-01.md: P2 benchmark/agent baseline 路线修订
-docs/current/P2_Next_Phase_Execution_Plan_2026-06-01.md: P2 下一阶段执行锁定方案
-docs/current/P2_D4_Branch_Decision_Audit_2026-06-01.md: P2 分支决策审计
-docs/current/P2_Branch_B_Execution_Plan_2026-06-01.md: P2 Branch B 执行锁定方案
-docs/current/P2_Branch_B_Calibration_Report_2026-06-01.md: P2 Branch B calibration 报告
-docs/current/P2_Official8_Native_Alignment_Audit_2026-06-01.md: P2 official8 native prompt/eval 对齐审计
-docs/current/P2_Post_Family1_Branch_Decision_Memo_2026-06-01.md: P2 Family 1 stop 后分支决策备忘录
-docs/current/P2_Post_Family1_Complete_Execution_Plan_2026-06-01.md: P2 Family 1 stop 后完整执行方案
-docs/current/P2_Locked_Complete_Execution_Scheme_2026-06-01.md: P2 当前最高优先级锁定执行方案
-docs/current/P2_Phase_C_Benchmark_Protocol_Preparation_2026-06-01.md: Phase C benchmark/protocol 安全准备
-docs/current/P2_Phase_C_Data_Source_and_Runner_Design_2026-06-01.md: Phase C 数据源与 runner 设计
-docs/current/P2_Phase_C_Data_Source_Field_License_Audit_2026-06-01.md: Phase C 数据源字段/license 审计
-docs/current/P2_Benchmark_Redesign_Candidate_Inventory_2026-06-01.md: Branch B benchmark redesign 候选清单
+docs/current/P3_Dream_DLM_Latent_MAS_Experiment_Design_2026-06-06.md: Dream-DLM LatentMAS 当前实验设计
+docs/current/P3_Dream_DLM_Latent_MAS_Implementation_Plan_2026-06-06.md: Dream-DLM LatentMAS 当前实施计划
+docs/current/P2_Latent_MAS_Communication_Implementation_Plan_2026-05-29.md: 历史 P2 canonical，供边界参考
+docs/current/P2_Benchmark_and_Agent_Baseline_Redesign_2026-06-01.md: 历史 P2 benchmark/agent baseline 路线修订
+docs/current/P2_Next_Phase_Execution_Plan_2026-06-01.md: 历史 P2 下一阶段执行锁定方案
+docs/current/P2_D4_Branch_Decision_Audit_2026-06-01.md: 历史 P2 分支决策审计
+docs/current/P2_Branch_B_Execution_Plan_2026-06-01.md: 历史 P2 Branch B 执行锁定方案
+docs/current/P2_Branch_B_Calibration_Report_2026-06-01.md: 历史 P2 Branch B calibration 报告
+docs/current/P2_Official8_Native_Alignment_Audit_2026-06-01.md: 历史 P2 official8 native prompt/eval 对齐审计
+docs/current/P2_Post_Family1_Branch_Decision_Memo_2026-06-01.md: 历史 P2 Family 1 stop 后分支决策备忘录
+docs/current/P2_Post_Family1_Complete_Execution_Plan_2026-06-01.md: 历史 P2 Family 1 stop 后完整执行方案
+docs/current/P2_Locked_Complete_Execution_Scheme_2026-06-01.md: 历史 P2 锁定执行方案，当前已被 P3 Dream-DLM supersede
+docs/current/P2_Phase_C_Benchmark_Protocol_Preparation_2026-06-01.md: 历史 Phase C benchmark/protocol 安全准备
+docs/current/P2_Phase_C_Data_Source_and_Runner_Design_2026-06-01.md: 历史 Phase C 数据源与 runner 设计
+docs/current/P2_Phase_C_Data_Source_Field_License_Audit_2026-06-01.md: 历史 Phase C 数据源字段/license 审计
+docs/current/P2_Benchmark_Redesign_Candidate_Inventory_2026-06-01.md: 历史 Branch B benchmark redesign 候选清单
 docs/p1_archive/P1_Final_Archive_and_P2_Plan_2026-05-27.md: P1 locked archive
 docs/p1_archive/P1_Model_Comparison_Report_2026-05-27.md: P1 主表、消融和泄漏审计
 docs/p0_reports/cola_adaptive_halt_paper_report_zh.md: P0 riskcap04 中文 canonical 报告
@@ -36,6 +38,2396 @@ CoLA P0/P1 archive completed on 2026-06-06. Use
 `/data1/luyifei/drla/docs/cola_archive/README.md` as the canonical entry for
 P0 adaptive halt teacher, P1 LatentHaltStudent-v1, checkpoint paths, summary
 metrics, and P2 CoLA diagnostic freeze notes.
+P3 Dream-DLM LatentMAS planning completed on 2026-06-06. The new main design is
+homogeneous Dream-v0-Instruct-7B agents on MuSiQue evidence-split QA, with
+Dream denoising-step readiness / halt as the P0/P1 migration target.
+P3 D0/D1 local-only substrate preparation has started. Dream-v0-Instruct-7B was
+downloaded and verified at `/data1/luyifei/drla/models/Dream-v0-Instruct-7B`.
+The D0 artifact is
+`/data1/luyifei/drla/outputs/p3_dream_models/Dream-org_Dream-v0-Instruct-7B_prepare_20260606_144309`.
+The D1 generation/state probe artifact is
+`/data1/luyifei/drla/outputs/p3_dream_models/dream_instruct_7b_generation_probe_20260606_144650`.
+The probe generated the expected Paris answer with `steps=16`,
+`max_new_tokens=32`, `output_history=True`, and confirmed online visibility of
+history tokens, token hook snapshots, logits summaries, and a last-layer hidden
+hook (`model.layers.27`) with peak allocated memory about 14.448 GiB on
+`cuda:0`.
+P3 D2 Dream TextMAS capability gate completed through maxctx4096 locked
+held-out800. D2.1 smoke10 artifact:
+`/data1/luyifei/drla/outputs/p3_dream_textmas_runs/dream_textmas_gate_samples10_20260606_145101`;
+aggregate:
+`/data1/luyifei/drla/outputs/p3_dream_textmas_aggregates/dream_textmas_gate_samples10_20260606_145101`.
+D2.2 pilot50 merged artifact:
+`/data1/luyifei/drla/outputs/p3_dream_textmas_runs/dream_textmas_gate_pilot50_merged_20260606`;
+aggregate:
+`/data1/luyifei/drla/outputs/p3_dream_textmas_aggregates/dream_textmas_gate_pilot50_merged_20260606`.
+D2.3 full200 merged artifact:
+`/data1/luyifei/drla/outputs/p3_dream_textmas_runs/dream_textmas_gate_full200_merged_20260606`;
+aggregate:
+`/data1/luyifei/drla/outputs/p3_dream_textmas_aggregates/dream_textmas_gate_full200_merged_20260606`;
+leakage audit:
+`/data1/luyifei/drla/outputs/p3_dream_protocol_audits/dream_textmas_gate_full200_merged_20260606`.
+Full200 uses 200 calibration samples / 1400 rows with zero generation row
+errors and zero leakage-audit errors. Aggregate gate is admitted:
+`single_full_info=0.59`, `single_q_only=0.045`, `textmas_matched=0.465`,
+`textmas_no_message=0.05`, `textmas_shuffled_message=0.11`,
+`textmas_wrong_evidence_or_wrong_shard=0.10`; paired CI lower bounds are
+`full_info_vs_question_only=0.475`, `matched_vs_no_message=0.34`,
+`matched_vs_shuffled=0.28`, and `matched_vs_wrong_evidence=0.295`.
+The initial maxctx2048 held-out queue exposed three `single_full_info` context
+overflow rows and is therefore invalid as a formal held-out result. It is kept
+only as a protocol-coverage diagnostic. Static context audits showed that
+maxctx4096 covers both calibration full200 and held-out800 under the current
+prompt/control schema.
+The current protocol lock artifact is
+`/data1/luyifei/drla/outputs/p3_dream_protocol_audits/dream_textmas_protocol_lock_calibration_full200_maxctx4096_20260606`;
+it locks Dream-v0-Instruct-7B, `bfloat16`, `max_tokens=128`, `dream_steps=64`,
+`temperature=0.2`, `top_p=0.95`, `alg=entropy`, `alg_temp=0.0`,
+`max_context_tokens=4096`, parser `first_segment`, scorer
+`score_qa_answer`, and the existing MuSiQue strict control definitions.
+D2.5 maxctx4096 held-out800 merged artifact:
+`/data1/luyifei/drla/outputs/p3_dream_textmas_runs/dream_textmas_gate_heldout800_maxctx4096_merged_20260606`;
+aggregate:
+`/data1/luyifei/drla/outputs/p3_dream_textmas_aggregates/dream_textmas_gate_heldout800_maxctx4096_merged_20260606`;
+leakage audit:
+`/data1/luyifei/drla/outputs/p3_dream_protocol_audits/dream_textmas_gate_heldout800_maxctx4096_merged_20260606`.
+Held-out uses 800 samples / 5600 rows with zero generation row errors and zero
+leakage-audit errors. Aggregate gate is admitted:
+`single_full_info=0.49625`, `single_q_only=0.025`,
+`textmas_matched=0.38125`, `textmas_no_message=0.0225`,
+`textmas_shuffled_message=0.045`,
+`textmas_wrong_evidence_or_wrong_shard=0.045`,
+`textmas_compressed_state=0.35`; all conditions have `parseable_rate=1.0`.
+Paired CI lower bounds are `full_info_vs_question_only=0.435`,
+`matched_vs_no_message=0.32375`, `matched_vs_shuffled=0.29875`, and
+`matched_vs_wrong_evidence=0.29875`. Dream TextMAS capability gate is therefore
+complete; the next main step is D3 Dream denoising-step trace/frontier on
+calibration/train split.
+D3 trace collector has been added and smoke-tested at
+`/data1/luyifei/drla/outputs/p3_dream_traces/musique_calibration_trace_smoke1_steps16_stride4_20260606`.
+The smoke uses 1 calibration `single_full_info` row, `dream_steps=16`,
+`max_tokens=32`, `snapshot_stride=4`, and records 1 solver trace call with
+zero errors. The trace contains hook events `[0, 0, 4, 8, 12, 15]`; every event
+has `trace_event_index` and `has_logit_stats` so D4 can distinguish repeated
+Dream hook events from duplicated samples. This is a local-only tool/protocol
+smoke, not a training result.
+D3 trace pilot2 also completed at
+`/data1/luyifei/drla/outputs/p3_dream_traces/musique_calibration_trace_pilot2_steps32_stride4_20260606`.
+It uses 2 calibration samples, conditions `single_full_info,textmas_matched`,
+`dream_steps=32`, `max_tokens=64`, and `snapshot_stride=4`. It produced 4
+generation rows and 8 Dream trace calls with zero errors: 4 solver calls and 4
+evidence-agent calls. All trace events have `trace_event_index` and
+`has_logit_stats`; no `gold_answer` or `answer_aliases` fields appear in
+`traces.jsonl`. This verifies the D3 collector can trace both direct solver and
+Agent A -> solver data flow.
+The D3 collector was then upgraded to save online Dream state features:
+`--hidden-capture-mode summary` records last-layer generated-suffix hidden
+statistics, and `--hidden-capture-mode suffix_tensor` writes suffix hidden
+tensor refs under `hidden_refs/`. Hidden summary smoke:
+`/data1/luyifei/drla/outputs/p3_dream_traces/musique_calibration_trace_hidden_summary_smoke1_steps16_stride4_20260606`;
+hidden tensor smoke:
+`/data1/luyifei/drla/outputs/p3_dream_traces/musique_calibration_trace_hidden_tensor_smoke1_steps8_stride4_20260606`.
+The tensor smoke produced 8 hidden refs; a loaded example has shape
+`(16, 3584)`, dtype `torch.float16`, scope `generated_suffix`.
+D3 subset20 trace completed at
+`/data1/luyifei/drla/outputs/p3_dream_traces/musique_calibration_trace_subset20_steps64_stride4_hidden_summary_20260606`.
+It uses 20 calibration samples, conditions `single_full_info,textmas_matched`,
+`dream_steps=64`, `max_tokens=128`, `snapshot_stride=4`, hidden summary mode,
+and produced 40 generation rows / 80 Dream trace calls with zero errors.
+Trace role distribution is 40 solver calls and 40 evidence-agent calls; event
+hidden/logit coverage is 1360/1440 = 0.9444, and no gold/alias fields appear in
+trace events.
+D4 readiness frontier builder has been added and run on the subset20 trace:
+`/data1/luyifei/drla/outputs/p3_dream_readiness_frontiers/musique_calibration_trace_subset20_steps64_stride4_hidden_summary_frontier_20260606`.
+It writes 40 solver frontier rows and 720 solver step events, with zero missing
+solver calls. On this subset, final primary scores are `single_full_info=0.6`
+and `textmas_matched=0.4`; 50% of rows have an oracle correct-and-final-stable
+step before the final event. This is an offline teacher/frontier diagnostic,
+not an online policy result. Next D3/D4 action should shard full calibration
+trace/frontier collection; single-process subset20 runtime shows full200 should
+not be run serially. No Dream training has run yet in P3.
+Full calibration D3/D4 has now completed with sharding. Queue artifact:
+`/data1/luyifei/drla/outputs/p3_dream_traces/musique_calibration_trace_full200_steps64_stride4_hidden_summary_20260606_queue`;
+merged trace:
+`/data1/luyifei/drla/outputs/p3_dream_traces/musique_calibration_trace_full200_steps64_stride4_hidden_summary_merged_20260606`;
+frontier:
+`/data1/luyifei/drla/outputs/p3_dream_readiness_frontiers/musique_calibration_trace_full200_steps64_stride4_hidden_summary_frontier_20260606`.
+The queue completed 20/20 shards with zero failed shards. The merge has 400
+generation rows, 200 samples, 800 Dream trace calls, zero duplicate row/call
+ids, and zero missing trace ids after shard-local call-id remapping. The
+frontier has 400 solver rows and 7200 solver step events with zero missing
+solver calls. Final primary by condition is `single_full_info=0.59` and
+`textmas_matched=0.465`, matching the D2 calibration aggregate for these two
+conditions. Hidden/logit event coverage is 0.9444. The oracle
+correct-and-final-stable-before-final row rate is 0.5275, with mean first
+correct-stable step about 4.72.
+During D5 preparation, the first student run
+`/data1/luyifei/drla/outputs/p3_dream_readiness_students/dream_step_readiness_student_v1_full200_seed20260606_20260606`
+was marked superseded because the initial D4 frontier did not preserve the
+`hidden_summary` payload, causing hidden feature statistics to be zero. The D4
+frontier builder was fixed and the corrected frontier is
+`/data1/luyifei/drla/outputs/p3_dream_readiness_frontiers/musique_calibration_trace_full200_steps64_stride4_hidden_summary_frontier_with_hidden_20260606`.
+It keeps 6800/7200 events with non-empty hidden summaries while preserving the
+same aggregate metrics. This corrected frontier is the current D5 training input;
+all labels are offline teacher labels and must not be used as online features.
+D5 DreamStepReadinessStudent-v1 with hidden/logit/process features completed at
+`/data1/luyifei/drla/outputs/p3_dream_readiness_students/dream_step_readiness_student_v1_full200_with_hidden_seed20260606_20260606`.
+This is a CUDA/GPU training run with SwanLab cloud run
+`https://swanlab.cn/@Lyfff/drla-mvp/runs/0vw4qvu08rajphqgllk64`.
+It used a causal trajectory Transformer over decoder-free features, multi-head
+outputs for `ready`, `future_gain`, `prediction_change`, and `final_match`,
+`valid_interval=10`, and saved both `best_checkpoint.pt` and
+`last_checkpoint.pt`. Training finished at `global_step=400`, best step 350.
+Best checkpoint metrics: valid `ready_auroc=0.9181`,
+valid `ready_accuracy_at_05=0.8458`, test `ready_auroc=0.7946`, test
+`ready_accuracy_at_05=0.7306`, test `final_match_auroc=0.9997`, and test
+`prediction_change_auroc=0.9997`. This is the current D5 readiness student
+artifact.
+D5.5 local-only online halt calibration / risk-control evaluation completed at
+`/data1/luyifei/drla/outputs/p3_dream_readiness_policy_eval/dream_step_readiness_student_v1_full200_with_hidden_policy_eval_20260606`.
+It loads the D5 `best_checkpoint.pt`, selects thresholds on validation only,
+and reports the internal test split without retuning. Selected policy:
+`ready_threshold=0.05`, `final_match_threshold=0.7`,
+`prediction_change_max=1.0`, `future_gain_max=999.0`. Internal test result:
+final accuracy `0.50`, selected accuracy `0.50`, accuracy drop vs final `0.0`,
+mean selected step `8.05`, mean step savings `54.95/63`, halt-before-final
+rate `0.95`. Paired bootstrap 95% CIs: accuracy drop `[0.0, 0.0]`, mean step
+savings `[50.525, 58.1]`, halt-before-final rate `[0.875, 1.0]`. This is a
+D5 internal split policy audit, not a new held-out TextMAS claim. Next work can
+start D6 latent packet construction, while preserving the rule that Agent A
+latent state must be consumed by Agent B and must not bypass B through decoded
+text or scorer-visible helper fields.
+D6 latent packet substrate and packet manifest completed. Because the earlier
+full200 trace only stored `hidden_summary`, a new local-only `suffix_tensor`
+trace was run for `textmas_matched` rows:
+`/data1/luyifei/drla/outputs/p3_dream_traces/musique_calibration_trace_textmas_matched200_steps64_stride4_hidden_tensor_20260606_queue`.
+It completed 20/20 shards with zero failures. The merged trace is
+`/data1/luyifei/drla/outputs/p3_dream_traces/musique_calibration_trace_textmas_matched200_steps64_stride4_hidden_tensor_merged_20260606`,
+with 200 rows, 200 samples, 600 Dream trace calls, and 38,400 hidden tensor refs.
+The tensor shards occupy about 33G. D6 packet builder output:
+`/data1/luyifei/drla/outputs/p3_dream_latent_packets/dream_textmas_matched200_agent_ab_suffix_tensor_packets_v1_20260606`.
+It builds `p3_dream_packet_v1_suffix_tensor` packets for upstream evidence agents:
+200 packet groups, 400 packets, 200 `agent_a` packets, 200 `agent_b` packets,
+and all 200 groups contain both agents. Packet audit status is pass:
+missing refs `0`, missing traces `0`, forbidden packet key hits `0`. Mean
+selected step is `21.98`; selected tensor example shape is `[128, 3584]`,
+dtype `torch.float16`. Important caveat: the D5 policy was trained on solver
+readiness labels, so applying it to evidence-agent traces is a D6 packet
+step-selection heuristic, not a new evidence-agent readiness claim. The next
+main work is D7 receiver/fuser integration with corruption controls.
+D7 receiver/fuser integration has started and produced two alignment runs.
+V1 MSE solver-state distillation:
+`/data1/luyifei/drla/outputs/p3_dream_latent_fusers/dream_latent_fuser_v1_textmas_matched200_seed20260606_20260606`,
+SwanLab run `https://swanlab.cn/@Lyfff/drla-mvp/runs/hg2otd5swqd3pzudh0k3b`.
+It trained with CUDA/GPU, SwanLab cloud, `valid_interval=10`, `global_step=800`,
+`best_step=570`, and saved `best_checkpoint.pt`, `last_checkpoint.pt`, and
+`metrics.jsonl`. V1 is diagnostic only: train controls show packet use, but
+valid/test controls do not pass; on test, `zero_packet` MSE is better than
+matched MSE. This suggests V1 learned an average solver-state component and
+does not prove receiver latent communication.
+D7 V2 contrastive receiver/fuser:
+`/data1/luyifei/drla/outputs/p3_dream_latent_fusers/dream_latent_fuser_v2_contrastive_textmas_matched200_seed20260606_20260606`,
+SwanLab run `https://swanlab.cn/@Lyfff/drla-mvp/runs/k07305m849l5jnjyijlk4`.
+It uses symmetric InfoNCE to align agent packet embeddings with same-row solver
+latent embeddings. Training used CUDA/GPU, SwanLab cloud, `valid_interval=10`,
+`global_step=800`, `best_step=780`, and saved required checkpoints/logs. Best
+checkpoint metrics: valid packet-to-target top1 `0.71875`, target-to-packet
+top1 `0.65625`; test packet-to-target top1 `0.75`, target-to-packet top1
+`0.625`. V2 local-only controls completed at
+`/data1/luyifei/drla/outputs/p3_dream_latent_fuser_controls/dream_latent_fuser_v2_contrastive_textmas_matched200_controls_20260606`.
+On 20-row valid/test splits, random top1 is `0.05`; valid matched top1 is
+`0.60` vs shuffled-row `0.05` and zero-packet `0.05`; test matched top1 is
+`0.55` vs shuffled-row `0.00` and zero-packet `0.05`. Agent-swap remains close
+to matched, so the current claim is row-specific latent alignment, not ordered
+agent-role sensitivity. V2 is the current accepted D7 alignment result, but it
+is not yet final answer generation or a complete LatentMAS main-table result.
+D7 raw latent-prefix receiver generation diagnostic completed at
+`/data1/luyifei/drla/outputs/p3_dream_latent_prefix_runs/dream_latent_prefix_eval_diag20_steps64_prefix8_20260606`.
+This local-only evaluator prepends raw D6 suffix tensors as continuous Dream
+inputs in a custom diffusion loop, with no Agent A/B decoded text messages in
+the solver prompt. Scope: 20 `textmas_matched` rows, `max_tokens=128`,
+`dream_steps=64`, `prefix_tokens_per_agent=8`, conditions `no_message`,
+`latent_matched`, `latent_shuffled_row`, `latent_agent_swap`, and `latent_zero`.
+Result: all variants have primary score `0.0`; all variants have token-F1 mean
+`0.0333`. The generated answers are essentially unchanged across matched,
+shuffled, zero, and no-message variants. Interpretation: directly prepending
+last-layer suffix hidden states to Dream input embeddings fails because the
+spaces are not aligned. This does not contradict V2 latent alignment; it
+motivated the V3 embedding-space soft-prefix adapter below and remains evidence
+against raw last-layer hidden prefixes.
+D7 V3 embedding-space soft-prefix adapter completed on 2026-06-07. Training
+script:
+`/data1/luyifei/drla/drla/scripts/p3_train_dream_soft_prefix_adapter.py`.
+Training artifact:
+`/data1/luyifei/drla/outputs/p3_dream_soft_prefix_adapters/dream_soft_prefix_adapter_v1_textmas_matched200_seed20260607_20260607`.
+SwanLab run:
+`https://swanlab.cn/@Lyfff/drla-mvp/runs/1qoue1655x7820f73wvmm`.
+It freezes Dream-v0-Instruct-7B, maps D6 agent_a/agent_b suffix tensors into a
+16-token Dream input-embedding prefix, and trains the adapter through Dream
+answer-token CE on the no-message solver prompt. Training obeyed CUDA/GPU,
+SwanLab cloud, `valid_interval=10`, `global_step=480`, `best_step=460`, and
+wrote `metrics.jsonl`, `best_checkpoint.pt`, and `last_checkpoint.pt`.
+Best checkpoint loss-level result: valid matched CE `2.9495` vs zero CE
+`6.1258`; test matched CE `2.7128` vs zero CE `5.7548`. This shows the
+adapter learns a non-zero answer-token conditioning signal. However,
+agent-swap CE remains close to matched (`best_test agent_swap_ce=2.6983` vs
+matched `2.7128`), so the loss-level result does not prove ordered role
+sensitivity.
+D7 V3 receiver-side generation controls completed locally with
+`/data1/luyifei/drla/drla/scripts/p3_run_dream_soft_prefix_eval.py`.
+Evaluation artifact:
+`/data1/luyifei/drla/outputs/p3_dream_soft_prefix_runs/dream_soft_prefix_eval_v1_best20_20260607`.
+Scope: 20 `textmas_matched` calibration rows, `max_tokens=128`,
+`dream_steps=64`, conditions `no_message`, `soft_prefix_matched`,
+`soft_prefix_shuffled_row`, `soft_prefix_agent_swap`, and `soft_prefix_zero`.
+No optimizer/backward/SwanLab run was used; no Agent A/B decoded text was
+inserted into the solver prompt. Result: primary score is `0.0` for all
+conditions. Token-F1 means are `no_message=0.0333`, `soft_prefix_zero=0.0333`,
+`soft_prefix_shuffled_row=0.0833`, `soft_prefix_matched=0.1083`, and
+`soft_prefix_agent_swap=0.1083`. Interpretation: V3 soft-prefix influences
+receiver output and improves weak token overlap over no-message/zero, but it
+does not pass the answer-generation gate and does not separate matched from
+agent-swap. Do not claim LatentMAS success from V3. The next D7 repair should
+move beyond a shallow input-embedding prefix toward native layer/KV integration,
+cross-attention receiver conditioning, or an answer-selection receiver that is
+explicitly trained/evaluated with matched-vs-shuffled-vs-zero controls.
+D7 V4 native layer-conditioned receiver completed on 2026-06-07. Training
+script:
+`/data1/luyifei/drla/drla/scripts/p3_train_dream_layer_conditioned_receiver.py`.
+This freezes Dream and injects packet conditioning at selected Dream layers
+`[7, 14, 21, 27]` through learned cross-attention residual adapters over the
+generated/masked positions. Training artifact:
+`/data1/luyifei/drla/outputs/p3_dream_layer_receivers/dream_layer_receiver_v1_textmas_matched200_seed20260607_20260607`.
+SwanLab run:
+`https://swanlab.cn/@Lyfff/drla-mvp/runs/0798gogc7xnpd3hiqeyya`.
+Training obeyed CUDA/GPU, SwanLab cloud, `valid_interval=10`,
+`global_step=480`, `best_step=480`, and wrote `metrics.jsonl`,
+`best_checkpoint.pt`, and `last_checkpoint.pt`. Best test loss-level result:
+matched CE `1.5232`, zero CE `1.8341`, shuffled-row CE `1.6898`, agent-swap
+CE `1.4997`. This is better than V3 on matched CE and gives positive
+zero/shuffled margins, but agent-swap remains slightly better than matched,
+so ordered role sensitivity is still not learned.
+D7 V4 20-row receiver generation controls:
+`/data1/luyifei/drla/outputs/p3_dream_layer_receiver_runs/dream_layer_receiver_eval_v1_best20_20260607`.
+Result: `layer_receiver_matched` primary `0.10`, token-F1 `0.175`; all four
+controls `no_message`, `layer_receiver_shuffled_row`, `layer_receiver_agent_swap`,
+and `layer_receiver_zero` have primary `0.0`. This was the first P3 receiver
+generation result with matched-only answer accuracy on 20 calibration rows.
+Because 20 rows is too small, it was immediately expanded.
+D7 V4 50-row receiver generation controls:
+`/data1/luyifei/drla/outputs/p3_dream_layer_receiver_runs/dream_layer_receiver_eval_v1_best50_20260607`.
+Scope: 50 `textmas_matched` calibration rows, 250 generations, local-only,
+no optimizer/backward/SwanLab, and no Agent A/B decoded text inserted into the
+solver prompt. Result: `layer_receiver_matched` primary `0.20`, token-F1
+`0.2693`; `layer_receiver_zero` primary `0.20`, token-F1 `0.2593`;
+`layer_receiver_agent_swap` primary `0.18`, token-F1 `0.2493`;
+`layer_receiver_shuffled_row` primary `0.18`, token-F1 `0.2293`;
+`no_message` primary `0.08`, token-F1 `0.0893`. Interpretation: V4 is a real
+receiver-side generation improvement over no-message, but the 50-row controls
+show most of the gain can be produced by the trained receiver with zero or
+corrupted packets. Therefore V4 is not accepted as packet-specific LatentMAS
+success. The next D7 repair must suppress receiver-prior leakage and optimize
+matched-vs-corruption separation directly, for example with corruption-aware
+training losses, explicit packet-use regularization, or a receiver-side
+answer-selection/reranking objective whose zero/shuffled/agent-swap controls
+cannot inherit the same learned answer prior.
+D7 V5 corruption-aware layer receiver completed on 2026-06-07. Training script:
+`/data1/luyifei/drla/drla/scripts/p3_train_dream_layer_receiver_corruption_aware.py`.
+It keeps the V4 architecture but changes the objective to
+`matched CE + margin(matched, zero/shuffled-row/agent-swap)`, so corrupted
+packets are explicitly penalized when they predict the same gold answer too
+well. Training artifact:
+`/data1/luyifei/drla/outputs/p3_dream_layer_receivers/dream_layer_receiver_v2_corruptaware_textmas_matched200_seed20260607_20260607`.
+SwanLab run:
+`https://swanlab.cn/@Lyfff/drla-mvp/runs/gotls7ez7sgvnzyv2vmha`.
+Training obeyed CUDA/GPU, SwanLab cloud, `valid_interval=10`,
+`global_step=480`, `best_step=400`, and wrote `metrics.jsonl`,
+`best_checkpoint.pt`, and `last_checkpoint.pt`. Best test loss-level result:
+matched CE `2.1024`, zero CE `5.7847`, shuffled-row CE `2.1638`,
+agent-swap CE `2.0692`. Final test result: matched CE `1.8225`, zero CE
+`5.4697`, shuffled-row CE `1.9194`, agent-swap CE `1.8251`. Interpretation:
+V5 strongly suppresses the zero-packet receiver prior and gives a modest
+matched-vs-shuffled loss margin, but agent-swap remains essentially tied with
+matched.
+D7 V5 20-row receiver generation controls:
+`/data1/luyifei/drla/outputs/p3_dream_layer_receiver_runs/dream_layer_receiver_v2_corruptaware_eval_best20_20260607`.
+Scope: 20 `textmas_matched` calibration rows, 100 generations, local-only,
+no optimizer/backward/SwanLab, and no Agent A/B decoded text inserted into the
+solver prompt. Result: primary score is `0.0` for all conditions. Token-F1:
+`no_message=0.0333`, `zero=0.0333`, `matched=0.0500`, `agent_swap=0.0500`,
+`shuffled_row=0.0667`. Interpretation: V5 removes much of the V4
+receiver-prior leakage, but it also removes the matched answer-generation gain.
+Do not expand V5 to 50 rows or D8. The next D7 repair should not simply
+increase the corruption margin; it should use a two-stage or multi-objective
+receiver-side answer-selection/reranking setup that preserves matched
+generation usefulness while enforcing matched-vs-corruption separation.
+D7 V6 receiver-side answer-reranker diagnostic completed on 2026-06-07.
+Candidate generation was built from receiver-generated outputs only, not from
+private evidence text. The candidate merge/audit script is
+`/data1/luyifei/drla/drla/scripts/p3_merge_dream_receiver_candidate_generations.py`.
+Merged candidate artifact:
+`/data1/luyifei/drla/outputs/p3_dream_layer_receiver_runs/dream_layer_receiver_eval_v1_best200_candidates_merged_20260607`.
+The merge validates 200 unique rows, 1000 generations, 5 conditions, zero
+duplicate row/condition pairs, zero missing row/condition pairs, and zero
+forbidden payload keys. Full200 generation metrics: `layer_receiver_matched`
+primary `0.195`, `agent_swap=0.190`, `shuffled_row=0.185`, `zero=0.115`,
+`no_message=0.045`. Candidate-pool ceiling audit with aliases: all-condition
+oracle primary `0.230`, matched-only oracle primary `0.195`, matched+no-message
+oracle primary `0.220`, and matched+zero oracle primary `0.220`; average
+all-condition candidate count is `2.71`. This means all-condition candidate
+pool is a diagnostic upper bound and is not a clean online single matched-run
+protocol.
+D7 V6 training script:
+`/data1/luyifei/drla/drla/scripts/p3_train_dream_receiver_answer_reranker.py`.
+Smoke training artifact:
+`/data1/luyifei/drla/outputs/p3_dream_answer_rerankers/dream_receiver_answer_reranker_v1_smoke1_seed20260607_20260607`,
+SwanLab run `https://swanlab.cn/@Lyfff/drla-mvp/runs/3tjatglw6lu25g49kxapd`.
+Full training artifact:
+`/data1/luyifei/drla/outputs/p3_dream_answer_rerankers/dream_receiver_answer_reranker_v1_seed20260607_20260607`,
+SwanLab run `https://swanlab.cn/@Lyfff/drla-mvp/runs/38fxxq335128q0vachhuh`.
+Training obeyed CUDA/GPU, SwanLab cloud, `valid_interval=10`,
+`global_step=3200`, `best_step=700`, and wrote `metrics.jsonl`,
+`best_checkpoint.pt`, and `last_checkpoint.pt`. Best test metrics:
+`matched_primary=0.20`, `zero_primary=0.25`, `shuffled_row_primary=0.25`,
+`agent_swap_primary=0.20`, `matched_minus_zero=-0.05`,
+`matched_minus_shuffled=-0.05`, `matched_minus_agent_swap=0.0`.
+Final test metrics are also not packet-specific: matched/zero/shuffled/agent_swap
+all have primary `0.15`. Interpretation: V6 is a negative diagnostic. It
+confirms that a post-hoc candidate reranker over weak receiver-generated
+candidates does not recover packet-specific LatentMAS behavior; it tends to
+select by candidate text prior and candidate-pool ceiling rather than by
+matched latent packet. Do not run held-out or D8 from V6. The next D7 repair
+must return to receiver alignment/fusion itself, with an online-valid candidate
+source if answer selection remains in scope.
+Literature context checked on 2026-06-07 is consistent with this diagnosis:
+recent latent-communication work emphasizes what state is communicated
+(embedding/hidden/KV), which layer/alignment is used, and how the receiver
+fuses the state; hybrid and trainable MAS protocols further emphasize
+interactive receiver alignment rather than a disconnected post-hoc reranker.
+D7 V7 V4-initialized zero/shuffled corruption fine-tune completed on
+2026-06-07. Motivation: `agent_swap` is not necessarily a strict negative
+because Agent A/B are both evidence agents and swapping packet order can
+preserve the same evidence set. V7 therefore starts from V4 best checkpoint and
+trains only against `zero` and `shuffled_row` corruptions, keeping agent-swap
+as a diagnostic. Training script:
+`/data1/luyifei/drla/drla/scripts/p3_train_dream_layer_receiver_corruption_aware.py`
+with new `--init-checkpoint` and `--corruption-types` support. Smoke artifact:
+`/data1/luyifei/drla/outputs/p3_dream_layer_receivers/dream_layer_receiver_v7_v4init_zeroshuf_smoke1_seed20260607_20260607`,
+SwanLab run `https://swanlab.cn/@Lyfff/drla-mvp/runs/hxpqk3c71f3avad3y62vw`.
+Full training artifact:
+`/data1/luyifei/drla/outputs/p3_dream_layer_receivers/dream_layer_receiver_v7_v4init_zeroshuf_textmas_matched200_seed20260607_20260607`,
+SwanLab run `https://swanlab.cn/@Lyfff/drla-mvp/runs/m2wnxo0pwzp49dcyl0d3n`.
+Training obeyed CUDA/GPU, SwanLab cloud, `valid_interval=10`,
+`global_step=480`, `best_step=470`, and wrote `metrics.jsonl`,
+`best_checkpoint.pt`, and `last_checkpoint.pt`. Best test loss-level metrics:
+matched CE `1.1486`, zero CE `1.6930`, shuffled-row CE `1.3863`,
+agent-swap CE `1.1135`; zero margin `0.5444`, shuffled margin `0.2377`,
+agent-swap margin `-0.0352`.
+D7 V7 generation controls completed locally. 50-row artifact:
+`/data1/luyifei/drla/outputs/p3_dream_layer_receiver_runs/dream_layer_receiver_v7_v4init_zeroshuf_eval_best50_20260607`.
+50-row result: matched primary `0.22`, zero `0.16`, shuffled-row `0.16`,
+agent-swap `0.22`, no-message `0.08`. Full200 merged artifact:
+`/data1/luyifei/drla/outputs/p3_dream_layer_receiver_runs/dream_layer_receiver_v7_v4init_zeroshuf_eval_best200_merged_20260607`.
+The merge validates 200 unique rows, 1000 generations, zero duplicate pairs,
+zero missing pairs, and zero forbidden payload keys. Full200 result:
+matched primary `0.215`, token-F1 `0.2789`; zero primary `0.095`, token-F1
+`0.1358`; shuffled-row primary `0.180`, token-F1 `0.2486`; agent-swap primary
+`0.210`, token-F1 `0.2777`; no-message primary `0.035`, token-F1 `0.0487`.
+Interpretation: V7 is the current strongest D7 receiver. It clearly suppresses
+the zero-packet receiver prior and modestly improves matched over shuffled-row,
+while preserving matched generation. However the matched-vs-shuffled margin is
+small and agent-swap is essentially tied with matched. Do not run D8 yet
+without an explicit decision that agent-swap is a symmetry diagnostic rather
+than a corruption negative, plus a locked held-out receiver/packet evaluation
+or stronger calibration risk audit.
+P3 text-encoded packet diagnostic was added on 2026-06-17 to test the hypothesis
+that AgentB-side text-encoder hidden states should be easier to consume than
+AgentA suffix tensors. Script:
+`/data1/luyifei/drla/drla/scripts/p3_run_dream_text_encoded_packet_eval.py`.
+It uses real D2 TextMAS `agent_messages`, encodes each agent message through
+Dream last-layer hidden states, and feeds the resulting continuous packets to
+the V7 receiver. The agent text is not inserted into the final solver prompt;
+it is used only to construct diagnostic packets. Smoke5 artifact:
+`/data1/luyifei/drla/outputs/p3_dream_text_encoded_packet_runs/dream_text_encoded_packet_eval_v7_smoke5_20260617`.
+Merged20 artifact:
+`/data1/luyifei/drla/outputs/p3_dream_text_encoded_packet_runs/dream_text_encoded_packet_eval_v7_merged20_20260617`.
+The merged audit validates 20 unique rows, 100 generations, zero duplicate
+pairs, zero missing pairs, and zero forbidden payload keys. Result:
+`text_encoded_matched` primary `0.05`, `text_encoded_agent_swap=0.05`,
+`text_encoded_shuffled_row=0.00`, `text_encoded_zero=0.00`, `no_message=0.00`.
+On exactly the same 20 rows, the original TextMAS matched text channel has
+primary `0.40` and token-F1 `0.42`. Interpretation: simply converting Agent
+text into Dream hidden states and injecting those states through the current
+V7 receiver does not recover TextMAS. This supports the diagnosis that the
+missing component is not only AgentA suffix-hidden distribution mismatch; the
+receiver/injection path itself needs explicit alignment or training on the
+intended text-encoded / communication state distribution.
+D7.6 text-packet adapter training was added on 2026-06-17 as the smallest
+explicit receiver-side alignment repair for the D7.5 failure. Training script:
+`/data1/luyifei/drla/drla/scripts/p3_train_dream_text_packet_adapter.py`.
+It freezes Dream and the V7 receiver, encodes real TextMAS Agent messages into
+Dream last-layer hidden packets, and trains a lightweight Transformer adapter
+from text-hidden packet space into the V7 receiver packet space. Empty Agent
+messages in four full200 rows are encoded as zero packets, preserving the fact
+that the text channel carried no content instead of fabricating helper text.
+Smoke artifact:
+`/data1/luyifei/drla/outputs/p3_dream_text_packet_adapters/dream_text_packet_adapter_v1_v7_smoke1_seed20260617_20260617`,
+SwanLab run `https://swanlab.cn/@Lyfff/drla-mvp/runs/wz0266vdk2jdcodgen1wi`.
+Full training artifact:
+`/data1/luyifei/drla/outputs/p3_dream_text_packet_adapters/dream_text_packet_adapter_v1_v7_seed20260617_20260617`,
+SwanLab run `https://swanlab.cn/@Lyfff/drla-mvp/runs/ui9l5tllope0w1pik527t`.
+Training obeyed CUDA/GPU, SwanLab cloud, `valid_interval=10`,
+`global_step=800`, `best_step=760`, and wrote `metrics.jsonl`,
+`best_checkpoint.pt`, and `last_checkpoint.pt`. Best loss-level metrics:
+valid matched CE `0.7869`, valid zero CE `1.4472`, valid shuffled-row CE
+`1.1283`; test matched CE `0.9926`, test zero CE `1.7216`, test shuffled-row
+CE `1.5200`. Local-only generation eval artifact:
+`/data1/luyifei/drla/outputs/p3_dream_text_encoded_packet_runs/dream_text_packet_adapter_v1_eval20_20260617`.
+On the same 20 rows as D7.5, `text_adapter_matched` primary is `0.05` and
+token-F1 is `0.17`; `text_adapter_agent_swap` primary is `0.05`, token-F1
+`0.125`; `text_adapter_shuffled_row` primary is `0.00`, token-F1 `0.075`;
+`text_adapter_zero` primary is `0.00`, token-F1 `0.075`; `no_message` primary
+is `0.00`, token-F1 `0.0333`. Compared with D7.5 raw text-hidden matched
+`0.05` primary / `0.125` token-F1, the adapter improves semantic overlap but
+does not improve primary accuracy. Compared with same-row TextMAS matched
+`0.40` primary / `0.42` token-F1, D7.6 still fails to recover text
+communication. Interpretation: a receiver-side mapping into V7 packet space is
+learnable at the CE level and slightly improves answer-token similarity, but it
+does not yet create a robust, controllable Agent A/B -> receiver communication
+protocol. Do not run D8 from D7.6; the next repair must explicitly optimize
+end-task receiver behavior and matched-vs-control separation, not only
+answer-token CE alignment.
+D7.7 TextMAS-teacher layer receiver training was added on 2026-06-17 to test
+whether explicit decoded-text teacher alignment can transfer TextMAS behavior
+into the latent receiver without inserting Agent text at runtime. Training
+script:
+`/data1/luyifei/drla/drla/scripts/p3_train_dream_layer_receiver_text_teacher.py`.
+It initializes from the V7 receiver, freezes Dream, trains the layer receiver
+on D6 latent packets, and adds a training-only TextMAS teacher distribution
+from same-row decoded Agent messages. The online student prompt remains the
+no-message solver prompt; Agent text appears only in the teacher forward pass.
+Smoke artifact:
+`/data1/luyifei/drla/outputs/p3_dream_layer_receivers/dream_layer_receiver_d77_text_teacher_smoke1_seed20260617_20260617`,
+SwanLab run `https://swanlab.cn/@Lyfff/drla-mvp/runs/2qlw93kku9oyotoge9w8l`.
+Full training artifact:
+`/data1/luyifei/drla/outputs/p3_dream_layer_receivers/dream_layer_receiver_d77_text_teacher_v7init_textmas_matched200_seed20260617_20260617`,
+SwanLab run `https://swanlab.cn/@Lyfff/drla-mvp/runs/z6rl2y32n03xsdqpwlcs9`.
+Training obeyed CUDA/GPU, SwanLab cloud, `valid_interval=10`,
+`global_step=480`, `best_step=440`, and wrote `metrics.jsonl`,
+`best_checkpoint.pt`, and `last_checkpoint.pt`. Best loss-level metrics:
+valid matched CE `0.7733`, zero CE `1.6413`, shuffled-row CE `1.3716`,
+teacher KL `2.1931`; test matched CE `0.8260`, zero CE `1.8806`,
+shuffled-row CE `1.5745`, teacher KL `2.2488`. This is a clear loss-level
+improvement over V7/D7.6. However local-only generation controls do not improve:
+best checkpoint artifact
+`/data1/luyifei/drla/outputs/p3_dream_layer_receiver_runs/dream_layer_receiver_d77_text_teacher_eval_best20_20260617`
+has `layer_receiver_matched` primary `0.05`, token-F1 `0.1283`;
+`agent_swap` primary `0.05`, token-F1 `0.1283`; `zero` primary `0.05`,
+token-F1 `0.1083`; `shuffled_row` primary `0.00`, token-F1 `0.0833`;
+`no_message` primary `0.00`, token-F1 `0.0333`. Last checkpoint artifact
+`/data1/luyifei/drla/outputs/p3_dream_layer_receiver_runs/dream_layer_receiver_d77_text_teacher_eval_last20_20260617`
+is worse for matched primary (`0.00`). On the same 20 rows, V7 matched was
+`0.10` primary / `0.19` token-F1 and TextMAS matched was `0.40` primary /
+`0.42` token-F1. Interpretation: teacher-forcing TextMAS KL/CE improves
+offline logits and corruption margins but still does not transfer to the
+diffusion generation behavior needed for latent communication. Do not run D8
+from D7.7. The next D7 repair should stop treating teacher-forced answer-token
+loss as sufficient evidence and instead optimize/evaluate online matched-channel
+generation behavior directly, for example through matched-channel candidate
+generation/selection with no corrupted-control candidates, or a generation-time
+alignment objective.
+
+D7.8 matched-channel candidate-pool diagnostic was added on 2026-06-17 to test
+whether the current strongest raw receiver, V7, at least samples correct answers
+under the online matched latent channel. Script:
+`/data1/luyifei/drla/drla/scripts/p3_run_dream_layer_receiver_candidate_pool_eval.py`.
+This is local-only evaluation, not training: no optimizer, no backward, no
+SwanLab run, no decoded Agent text inserted into the solver prompt. It samples
+8 candidates per row per condition on the same 20-row comparison set and reports
+online-visible first/majority metrics plus an offline oracle ceiling. Full
+artifact:
+`/data1/luyifei/drla/outputs/p3_dream_layer_receiver_candidate_pools/dream_layer_receiver_v7_candidate_pool_best20_c8_20260617`.
+The run completed 800 generations. One Dream tokenizer `None` token decode
+edge case was fixed with `safe_decode`, and the script now supports `--resume`
+so partial runs can continue without discarding generated rows.
+
+D7.8 metrics:
+
+```text
+no_message:
+  first_primary = 0.00
+  majority_primary = 0.00
+  oracle_primary = 0.00
+  oracle_token_f1 = 0.00
+
+layer_receiver_matched:
+  first_primary = 0.05
+  majority_primary = 0.05
+  oracle_primary = 0.15
+  oracle_token_f1 = 0.195
+
+layer_receiver_agent_swap:
+  first_primary = 0.05
+  majority_primary = 0.05
+  oracle_primary = 0.05
+  oracle_token_f1 = 0.1843
+
+layer_receiver_shuffled_row:
+  first_primary = 0.00
+  majority_primary = 0.00
+  oracle_primary = 0.00
+  oracle_token_f1 = 0.115
+
+layer_receiver_zero:
+  first_primary = 0.00
+  majority_primary = 0.00
+  oracle_primary = 0.15
+  oracle_token_f1 = 0.15
+```
+
+Row-level audit: matched oracle-correct rows = 3/20, zero oracle-correct rows =
+3/20. Two rows overlap between matched and zero; matched has only one unique
+oracle-correct row, and one matched-correct row is also correct under
+agent_swap. Therefore V7 matched latent channel has weak candidate-source
+signal, but it is not packet-specific or stable enough to justify D8 or a
+reranker as the main next step. Compared with same-row TextMAS matched
+`0.40` primary / `0.42` token-F1, V7/D7.8 remains far behind.
+
+Interpretation: the next D7 step should not assume that “same Dream model
+latent distribution” is already compatible across agents. TextMAS works because
+Agent A output is decoded to text and then re-enters Agent B through AgentB's
+tokenizer, embedding stack, and diffusion generation dynamics. Direct D6 suffix
+packets bypass that learned text-to-hidden interface. Before another receiver
+training run, run a local-only interface/distribution audit comparing
+TextMAS-conditioned AgentB hidden states with D6 packet tensors and the receiver
+injection states; only after the mismatch is localized should we train a new
+receiver/fuser.
+
+D7.9 interface/distribution audit was added and run on 2026-06-17. Script:
+`/data1/luyifei/drla/drla/scripts/p3_audit_dream_receiver_interface_distribution.py`.
+This is local-only forward/statistics work: no generation, no optimizer, no
+backward, no SwanLab run, no gold/scorer fields. It compares the same 20 rows
+across:
+
+```text
+no-message AgentB solver prompt hidden states
+TextMAS AgentB solver prompt hidden states with decoded Agent messages
+D6 agent_a/agent_b suffix packet tensors
+V7 PacketMemoryEncoder output
+V7 selected-layer gated cross-attention deltas on masked solver positions
+```
+
+Artifacts:
+
+```text
+smoke2:
+  /data1/luyifei/drla/outputs/p3_dream_receiver_interface_audits/
+  dream_receiver_interface_audit_v7_smoke2_20260617
+
+best20:
+  /data1/luyifei/drla/outputs/p3_dream_receiver_interface_audits/
+  dream_receiver_interface_audit_v7_best20_20260617
+```
+
+D7.9 best20 key metrics:
+
+```text
+TextMAS extra tokens entering AgentB prompt:
+  mean = 238.9
+
+mean-vector cosine:
+  D6 packet -> no-message prompt hidden = 0.2947
+  D6 packet -> TextMAS full prompt hidden = 0.5149
+  D6 packet -> TextMAS last128 hidden = 0.5868
+  TextMAS prompt -> no-message prompt hidden = 0.8608
+
+token_norm_mean:
+  D6 packet all = 223.25
+  AgentB no-message prompt hidden = 324.41
+  AgentB TextMAS prompt hidden = 320.54
+  V7 receiver memory, after 3584->256 projection/Transformer = 34.82
+
+receiver selected-layer gates:
+  layer7 gate = 0.1211
+  layer14 gate = 0.1221
+  layer21 gate = 0.1245
+  layer27 gate = 0.1235
+
+gated delta / masked hidden norm ratio:
+  layer7 = 0.3116
+  layer14 = 0.2531
+  layer21 = 0.2495
+  layer27 = 0.0472
+```
+
+Interpretation: D6 packets are not pure noise; their mean direction is much
+closer to TextMAS prompt hidden than to no-message prompt hidden. However, the
+current V7 receiver does not pass the packet as AgentB's natural text-interface
+hidden state. It compresses two 32-token 3584-d agent tensors into 64 tokens of
+256-d memory, then injects the signal through small gated cross-attention
+deltas. By the final selected layer, the packet-induced update is only about
+4.7% of the masked hidden norm. This supports the observed D7.8 pattern:
+matched has weak candidate-source signal but not enough stable causal influence
+on Dream generation. The next receiver should be text-interface-aligned, for
+example by learning a packet-to-AgentB-message-hidden bridge or stronger native
+conditioning that preserves token-level structure and has generation-time
+controls. Do not proceed to D8 from V7/D7.8/D7.9.
+
+D7.10 text-interface virtual-message receiver was implemented and run on
+2026-06-17. Motivation: D7.9 showed that D6 packets are closer to TextMAS
+AgentB prompt hidden states than to no-message hidden states, but V7's 256-d
+memory/gated cross-attention path was too weak. D7.10 therefore maps packet
+tensors into continuous virtual message tokens at AgentB's solver interface.
+This follows the general lesson from prefix-tuning / continuous prompt work
+that continuous vectors must be placed where the frozen model can naturally
+attend to them as virtual tokens, while preserving the LatentMAS/Coconut
+requirement that runtime communication stays latent and decoder-free.
+
+D7.10 scripts:
+
+```text
+training:
+  /data1/luyifei/drla/drla/scripts/p3_train_dream_text_interface_receiver.py
+
+generation eval:
+  /data1/luyifei/drla/drla/scripts/p3_run_dream_text_interface_receiver_eval.py
+```
+
+Model design:
+
+```text
+inputs:
+  D6 agent_a / agent_b suffix tensors
+  shape after selection = 2 agents x 32 tokens x 3584 hidden
+
+receiver:
+  packet LayerNorm + 3584 -> d_model projection
+  agent embedding + packet positional embedding
+  2-layer Transformer memory encoder
+  learned prefix queries cross-attend to packet memory
+  MLP outputs prefix_len continuous virtual message tokens in 3584-d space
+
+online generation:
+  no-message AgentB solver prompt
+  + virtual message prefix from latent packet
+  + Dream diffusion masked answer generation
+  decoded Agent text is not inserted
+
+training-only teacher:
+  TextMAS decoded Agent messages define TextMAS prompt hidden/logit targets
+  gold answer tokens define supervised CE target
+```
+
+Smoke training passed:
+
+```text
+artifact:
+  /data1/luyifei/drla/outputs/p3_dream_text_interface_receivers/
+  dream_text_interface_receiver_d710_smoke2c_seed20260617_20260617
+
+SwanLab:
+  https://swanlab.cn/@Lyfff/drla-mvp/runs/eey3s8ssjeq9b79brmeh1
+
+status:
+  pass
+  global_step = 2
+  valid_interval = 1
+  best_checkpoint.pt = present
+  last_checkpoint.pt = present
+  metrics.jsonl = present
+```
+
+Full D7.10 v1 training:
+
+```text
+artifact:
+  /data1/luyifei/drla/outputs/p3_dream_text_interface_receivers/
+  dream_text_interface_receiver_d710_v1_p96d1024_seed20260617_20260617
+
+SwanLab:
+  https://swanlab.cn/@Lyfff/drla-mvp/runs/eb1evnoegho5ez5f6qvje
+
+config:
+  prefix_len = 96
+  d_model = 1024
+  num_heads = 8
+  global_step = 480
+  best_step = 460
+  valid_interval = 10
+  SwanLab cloud = yes
+  best_checkpoint.pt / last_checkpoint.pt / metrics.jsonl = present
+```
+
+Best checkpoint loss-level metrics:
+
+```text
+valid:
+  matched_ce = 2.5406
+  token_accuracy = 0.5683
+  hidden_cosine_loss = 0.5361
+  hidden_mse = 22.0105
+  zero_ce_margin = 0.0403
+  shuffled_row_ce_margin = -0.0042
+  agent_swap_ce_margin = -0.0223
+
+test:
+  matched_ce = 2.8319
+  token_accuracy = 0.5141
+  hidden_cosine_loss = 0.5487
+  zero_ce_margin = 0.0603
+  shuffled_row_ce_margin = 0.0262
+  agent_swap_ce_margin = -0.0024
+```
+
+Generation controls:
+
+```text
+best checkpoint artifact:
+  /data1/luyifei/drla/outputs/p3_dream_text_interface_receiver_runs/
+  dream_text_interface_receiver_d710_v1_best20_20260617
+
+best checkpoint:
+  no_message primary = 0.00, token_f1 = 0.0333
+  text_interface_matched primary = 0.05, token_f1 = 0.1500
+  text_interface_zero primary = 0.05, token_f1 = 0.1333
+  text_interface_shuffled_row primary = 0.05, token_f1 = 0.1333
+  text_interface_agent_swap primary = 0.05, token_f1 = 0.1583
+
+last checkpoint artifact:
+  /data1/luyifei/drla/outputs/p3_dream_text_interface_receiver_runs/
+  dream_text_interface_receiver_d710_v1_last20_20260617
+
+last checkpoint:
+  no_message primary = 0.00, token_f1 = 0.0333
+  text_interface_matched primary = 0.05, token_f1 = 0.0750
+  text_interface_zero primary = 0.05, token_f1 = 0.0500
+  text_interface_shuffled_row primary = 0.05, token_f1 = 0.1000
+  text_interface_agent_swap primary = 0.05, token_f1 = 0.1083
+```
+
+Row-level audit: for the best checkpoint, the only primary-correct row is
+correct under matched, zero, shuffled-row, and agent-swap simultaneously.
+Therefore D7.10 v1 does not provide packet-specific latent communication. It is
+a useful negative diagnostic: virtual-message prefixing can train and slightly
+improve token-F1, but the current objective still lets the receiver learn a
+shared answer prior that survives corrupted packets. Do not proceed to D8 from
+D7.10. Next D7 work must make the objective explicitly packet-specific at
+generation time, for example by penalizing zero/shuffled/agent-swap answers that
+match the same gold, using matched-vs-corruption contrastive hidden/logit
+targets, or changing the receiver so corrupted packets cannot produce the same
+virtual message prior.
+
+D7.11 packet-specific text-interface receiver was implemented and run on
+2026-06-17 by extending the D7.10 trainer with optional negative/contrastive
+losses. It keeps the same online architecture and runtime boundary as D7.10,
+but initializes from D7.10 best checkpoint and adds:
+
+```text
+corrupt_unlikelihood:
+  penalize zero/shuffled/agent_swap packets for assigning high probability to
+  the same gold answer tokens
+
+logit_contrast:
+  InfoNCE-style contrast where matched answer-token CE should beat zero,
+  shuffled-row, and agent-swap CE
+
+hidden_contrast:
+  only matched prefix hidden should be closer to TextMAS teacher hidden than
+  corrupted prefix hidden
+```
+
+Reference motivation: unlikelihood training explicitly lowers the probability
+of negative tokens/sequences, and contrastive objectives are designed to keep
+positive pairs close while pushing negatives apart. In this experiment those
+ideas are applied only to training-time corrupted latent packets; runtime
+communication stays decoder-free and does not insert Agent text.
+
+Smoke:
+
+```text
+artifact:
+  /data1/luyifei/drla/outputs/p3_dream_text_interface_receivers/
+  dream_text_interface_receiver_d711_smoke2_seed20260617_20260617
+
+SwanLab:
+  https://swanlab.cn/@Lyfff/drla-mvp/runs/drls43zfkxm6c2f8s037t
+
+status:
+  pass
+  global_step = 2
+  init_checkpoint = D7.10 v1 best
+  best/last/metrics present
+```
+
+Full D7.11 v1 training:
+
+```text
+artifact:
+  /data1/luyifei/drla/outputs/p3_dream_text_interface_receivers/
+  dream_text_interface_receiver_d711_v1_packet_specific_seed20260617_20260617
+
+SwanLab:
+  https://swanlab.cn/@Lyfff/drla-mvp/runs/fopwvqmgi8fqfhxodxruv
+
+config:
+  init_checkpoint = D7.10 v1 best
+  prefix_len = 96
+  d_model = 1024
+  corruption_weight = 0.5
+  corruption_margin = 0.5
+  corrupt_unlikelihood_weight = 0.5
+  logit_contrast_weight = 1.0
+  hidden_contrast_weight = 0.5
+  contrast_temperature = 0.5
+  global_step = 480
+  best_step = 230
+  valid_interval = 10
+```
+
+Loss-level result:
+
+```text
+best valid:
+  matched_ce = 2.4047
+  token_accuracy = 0.5529
+  zero_ce = 9.1889
+  zero_ce_margin = 6.7841
+  shuffled_row_ce_margin = 0.0021
+  agent_swap_ce_margin = -0.0240
+  logit_contrast_loss = 1.1155
+  hidden_contrast_loss = 1.2194
+
+best test:
+  matched_ce = 2.7797
+  token_accuracy = 0.5281
+  zero_ce = 9.1559
+  zero_ce_margin = 6.3762
+  shuffled_row_ce_margin = 0.0303
+  agent_swap_ce_margin = 0.0030
+```
+
+Generation controls:
+
+```text
+best checkpoint artifact:
+  /data1/luyifei/drla/outputs/p3_dream_text_interface_receiver_runs/
+  dream_text_interface_receiver_d711_v1_best20_20260617
+
+best checkpoint:
+  no_message primary = 0.00, token_f1 = 0.0333
+  text_interface_matched primary = 0.00, token_f1 = 0.0667
+  text_interface_zero primary = 0.00, token_f1 = 0.0000
+  text_interface_shuffled_row primary = 0.00, token_f1 = 0.0667
+  text_interface_agent_swap primary = 0.00, token_f1 = 0.0583
+
+last checkpoint artifact:
+  /data1/luyifei/drla/outputs/p3_dream_text_interface_receiver_runs/
+  dream_text_interface_receiver_d711_v1_last20_20260617
+
+last checkpoint:
+  no_message primary = 0.00, token_f1 = 0.0333
+  text_interface_matched primary = 0.00, token_f1 = 0.0500
+  text_interface_zero primary = 0.00, token_f1 = 0.0000
+  text_interface_shuffled_row primary = 0.00, token_f1 = 0.0333
+  text_interface_agent_swap primary = 0.00, token_f1 = 0.0500
+```
+
+Interpretation: D7.11 fixed only half of the D7.10 failure. It successfully
+suppresses the zero/shared virtual-prefix prior at the loss level and in
+generation, but it also suppresses matched generation; matched primary drops
+from D7.10's prior-driven 0.05 to 0.00. It still does not produce
+packet-specific latent communication. The next experiment should not simply
+increase negative weights. It needs a balanced objective or architecture that
+preserves matched generation quality while preventing corrupted packets from
+sharing the same answer prior. In particular, agent_swap remains a hard
+diagnostic because evidence-agent order and role semantics are not strongly
+distinguished by the current packet representation.
+
+D7.12 balanced text-interface receiver was implemented and run on 2026-06-17.
+It extends the D7.10/D7.11 trainer with negative-loss warmup and a checkpoint
+selection metric that treats corruption margins as capped risk controls rather
+than unbounded rewards. The goal was to preserve matched generation while
+separating hard corrupted controls.
+
+Script changes:
+
+```text
+drla/scripts/p3_train_dream_text_interface_receiver.py
+
+new options:
+  --negative-loss-warmup-steps
+  --selection-token-accuracy-weight
+  --selection-margin-target
+  --selection-margin-overflow-penalty
+```
+
+Smoke:
+
+```text
+artifact:
+  /data1/luyifei/drla/outputs/p3_dream_text_interface_receivers/
+  dream_text_interface_receiver_d712_balanced_smoke2_seed20260617_20260617
+
+SwanLab:
+  https://swanlab.cn/@Lyfff/drla-mvp/runs/qoatplup9a5ekdr8bwydr
+
+status:
+  pass
+  global_step = 2
+  valid_interval = 1
+  best/last/metrics present
+```
+
+Full D7.12 v1:
+
+```text
+artifact:
+  /data1/luyifei/drla/outputs/p3_dream_text_interface_receivers/
+  dream_text_interface_receiver_d712_balanced_v1_seed20260617_20260617
+
+SwanLab:
+  https://swanlab.cn/@Lyfff/drla-mvp/runs/fbuzdxnxs5ow5plfc64eo
+
+config:
+  init_checkpoint = D7.10 v1 best
+  prefix_len = 96
+  d_model = 1024
+  learning_rate = 3e-5
+  hidden_align_weight = 0.8
+  teacher_kl_weight = 0.3
+  corruption_weight = 0.15
+  corruption_margin = 0.2
+  corrupt_unlikelihood_weight = 0.05
+  logit_contrast_weight = 0.2
+  hidden_contrast_weight = 0.1
+  negative_loss_warmup_steps = 160
+  selection_token_accuracy_weight = 0.8
+  selection_margin_target = 1.0
+  selection_margin_overflow_penalty = 0.3
+  global_step = 480
+  best_step = 140
+  valid_interval = 10
+```
+
+Loss-level result:
+
+```text
+best valid:
+  matched_ce = 2.7577
+  token_accuracy = 0.5867
+  zero_ce_margin = 0.6173
+  shuffled_row_ce_margin = 0.1005
+  agent_swap_ce_margin = 0.0059
+
+best test:
+  matched_ce = 3.2509
+  token_accuracy = 0.5082
+  zero_ce_margin = 0.5295
+  shuffled_row_ce_margin = -0.0046
+  agent_swap_ce_margin = 0.0203
+```
+
+Generation controls:
+
+```text
+best checkpoint artifact:
+  /data1/luyifei/drla/outputs/p3_dream_text_interface_receiver_runs/
+  dream_text_interface_receiver_d712_balanced_v1_best20_20260617
+
+best checkpoint:
+  no_message primary = 0.00, token_f1 = 0.0333
+  text_interface_matched primary = 0.05, token_f1 = 0.0750
+  text_interface_zero primary = 0.05, token_f1 = 0.0500
+  text_interface_shuffled_row primary = 0.05, token_f1 = 0.0500
+  text_interface_agent_swap primary = 0.05, token_f1 = 0.0750
+
+last checkpoint artifact:
+  /data1/luyifei/drla/outputs/p3_dream_text_interface_receiver_runs/
+  dream_text_interface_receiver_d712_balanced_v1_last20_20260617
+
+last checkpoint:
+  no_message primary = 0.00, token_f1 = 0.0333
+  text_interface_matched primary = 0.05, token_f1 = 0.0500
+  text_interface_zero primary = 0.00, token_f1 = 0.0000
+  text_interface_shuffled_row primary = 0.00, token_f1 = 0.0583
+  text_interface_agent_swap primary = 0.05, token_f1 = 0.0500
+```
+
+Row-level audit:
+
+```text
+best checkpoint:
+  matched-correct row = p2c_musique_calibration_2hop__585569_12907
+  the same row is also correct under zero, shuffled-row, and agent-swap
+
+last checkpoint:
+  matched-correct row = p2c_musique_calibration_2hop__585569_12907
+  the same row is also correct under agent-swap
+  zero and shuffled-row are no longer correct on that row
+```
+
+Interpretation: D7.12 confirms that warmup and capped-margin selection can
+avoid the D7.11 failure mode of destroying matched generation. It still does
+not pass the D7 receiver gate: best remains prior-driven across all virtual
+prefix conditions, and last only separates zero/shuffled while agent_swap stays
+tied with matched. This reinforces the earlier V7 note that agent_swap may not
+be a strict negative under homogeneous evidence-agent roles; until the protocol
+has asymmetric roles, agent_swap should be reported as a symmetry/role
+diagnostic rather than optimized as a hard corruption. The hard generation
+controls remain zero and shuffled-row.
+
+D7.13 receiver-control audit was added on 2026-06-17 to put V7 and the
+D7.10-D7.12 text-interface branch under one paired metric contract.
+
+```text
+script:
+  /data1/luyifei/drla/drla/scripts/
+  p3_audit_dream_receiver_generation_controls.py
+
+artifact:
+  /data1/luyifei/drla/outputs/p3_dream_receiver_control_audits/
+  dream_receiver_generation_control_audit_v7_d710_d711_d712_20260617
+
+boundary:
+  local-only
+  no model loading or generation
+  no optimizer/backward/weight update
+  no SwanLab run
+
+hard controls:
+  no_message
+  zero
+  shuffled_row
+
+diagnostic controls:
+  agent_swap
+```
+
+Main audit result:
+
+```text
+V7 full200:
+  matched primary = 0.215
+  no_message primary = 0.035
+  zero primary = 0.095
+  shuffled_row primary = 0.180
+  agent_swap primary = 0.210
+
+V7 paired primary deltas:
+  matched - no_message = 0.180, 95% bootstrap CI = [0.120, 0.240]
+  matched - zero = 0.120, 95% bootstrap CI = [0.065, 0.180]
+  matched - shuffled_row = 0.035, 95% bootstrap CI = [0.005, 0.070]
+  matched - agent_swap = 0.005, 95% bootstrap CI = [-0.010, 0.025]
+
+V7 row overlap:
+  matched correct rows = 43 / 200
+  zero correct rows = 19 / 200
+  shuffled_row correct rows = 36 / 200
+  agent_swap correct rows = 42 / 200
+  matched unique over zero = 31 rows
+  matched unique over shuffled_row = 9 rows
+  matched unique over agent_swap = 2 rows
+```
+
+Comparison with text-interface receivers:
+
+```text
+D7.10 best/last:
+  matched primary = 0.05
+  zero/shuffled-row also = 0.05
+  hard gate = fail
+
+D7.11 best/last:
+  matched primary = 0.00
+  hard gate = fail
+
+D7.12 best:
+  matched primary = 0.05
+  zero/shuffled-row also = 0.05
+  hard gate = fail
+
+D7.12 last:
+  matched primary = 0.05
+  zero/shuffled-row = 0.00
+  paired CI lower remains 0.00 on 20 rows
+  hard gate = fail
+```
+
+Interpretation: under the revised control taxonomy, V7 is the current strongest
+receiver and the only one with positive paired primary CIs against the hard
+controls on full200. However, it is not enough for D8: matched-vs-shuffled is
+small, token-F1 matched-vs-shuffled has a CI crossing zero, and agent_swap
+remains tied as a symmetry/role diagnostic. The text-interface branch is useful
+as diagnostic evidence but should not be the next main receiver path unless its
+matched generation can approach V7 while keeping zero/shuffled separated.
+
+D7.14 held-out D6 packet readiness / evaluation was completed on 2026-06-17 to
+check whether the current strongest receiver, V7 layer-conditioned zeroshuf,
+generalizes from calibration full200 to the locked D2.5 held-out800 split
+without breaking the protocol.
+
+```text
+script:
+  /data1/luyifei/drla/drla/scripts/
+  p3_audit_dream_heldout_packet_readiness.py
+
+artifact:
+  /data1/luyifei/drla/outputs/p3_dream_heldout_packet_preflights/
+  dream_heldout_packet_readiness_preflight_20260617
+
+boundary:
+  local-only
+  no model loading or generation
+  no optimizer/backward/weight update
+  no SwanLab run
+```
+
+Initial preflight result:
+
+```text
+status = blocked before substrate construction
+can_run_v7_heldout_eval = false before substrate construction
+
+available:
+  held-out manifest = present
+  held-out online inputs = present
+  held-out TextMAS aggregate = present
+  calibration suffix-tensor trace reference = present
+  calibration D6 packet reference = present
+  V7 best checkpoint = present
+
+missing:
+  held-out suffix-tensor trace =
+    /data1/luyifei/drla/outputs/p3_dream_traces/
+    musique_heldout_trace_textmas_matched800_steps64_stride4_hidden_tensor_merged_20260617
+  held-out D6 packet manifest =
+    /data1/luyifei/drla/outputs/p3_dream_latent_packets/
+    dream_textmas_heldout800_agent_ab_suffix_tensor_packets_v1_20260617
+
+held-out online rows:
+  textmas_matched = 800
+  all seven D2.5 conditions = 800 each
+
+storage estimate:
+  calibration suffix-tensor hidden refs = 38,400 files / 32.883 GiB
+  estimated held-out raw suffix-tensor trace hidden refs = 131.533 GiB
+  estimated held-out D6 selected packet refs = 1.370 GiB
+  free disk before trace = 211.552 GiB
+  estimated free disk after trace = 80.019 GiB
+  disk budget check = pass with min_free_gib_after_trace=50
+```
+
+Held-out substrate construction:
+
+```text
+trace queue:
+  /data1/luyifei/drla/outputs/p3_dream_traces/
+  musique_heldout_trace_textmas_matched800_steps64_stride4_hidden_tensor_20260617_queue
+
+trace queue status:
+  pass
+  completed shards = 80 / 80
+  failed shards = 0
+
+merged trace:
+  /data1/luyifei/drla/outputs/p3_dream_traces/
+  musique_heldout_trace_textmas_matched800_steps64_stride4_hidden_tensor_merged_20260617
+
+merged trace status:
+  pass
+  rows = 800
+  samples = 800
+  traces = 2400
+  duplicate row/call ids = 0
+  missing trace ids = 0
+
+held-out D6 packet manifest:
+  /data1/luyifei/drla/outputs/p3_dream_latent_packets/
+  dream_textmas_heldout800_agent_ab_suffix_tensor_packets_v1_20260617
+
+packet status:
+  pass
+  packet groups = 800
+  packets = 1600
+  agent_a packets = 800
+  agent_b packets = 800
+  groups with two agents = 800
+  missing refs / traces / forbidden keys = 0 / 0 / 0
+  mean selected step = 21.534375
+  total referenced hidden bytes = 1.471 GiB
+```
+
+Post-substrate preflight result:
+
+```text
+status = ready
+can_run_v7_heldout_eval = true
+missing required checks = []
+advisory disk_budget_for_full_trace = false after construction
+```
+
+The disk-budget failure in the final preflight is advisory only: it asks whether
+the full trace could be regenerated again from the now-lower free disk, not
+whether the already-built held-out trace/packet substrate is valid.
+
+The V7 held-out receiver eval script was also fixed before the full run. The
+checkpoint config still records calibration packet paths, but runtime
+`--manifest-json`, `--online-inputs-jsonl`, `--packet-dir`, and `--model-path`
+now override those paths. Summaries write both `checkpoint_data_config` and
+`runtime_data_config`, and the held-out smoke confirmed runtime data points to
+the locked held-out split.
+
+Held-out V7 receiver evaluation:
+
+```text
+checkpoint:
+  /data1/luyifei/drla/outputs/p3_dream_layer_receivers/
+  dream_layer_receiver_v7_v4init_zeroshuf_textmas_matched200_seed20260607_20260607/
+  best_checkpoint.pt
+
+full eval shards:
+  /data1/luyifei/drla/outputs/p3_dream_layer_receiver_runs/
+  dream_layer_receiver_v7_heldout800_shard000_rows0000_0266_20260617
+  dream_layer_receiver_v7_heldout800_shard001_rows0267_0533_20260617
+  dream_layer_receiver_v7_heldout800_shard002_rows0534_0799_20260617
+
+merged eval:
+  /data1/luyifei/drla/outputs/p3_dream_layer_receiver_runs/
+  dream_layer_receiver_v7_heldout800_merged_20260617
+
+merge validation:
+  status = pass
+  generations = 4000
+  unique rows = 800
+  conditions = 5
+  duplicates = 0
+  missing pairs = 0
+  forbidden payload hits = 0
+```
+
+Held-out condition means:
+
+```text
+primary_score_mean:
+  matched = 0.02500
+  no_message = 0.02375
+  zero = 0.02875
+  shuffled_row = 0.02375
+  agent_swap = 0.02375
+
+exact_match_mean:
+  matched = 0.02125
+  no_message = 0.01750
+  zero = 0.02500
+  shuffled_row = 0.02000
+  agent_swap = 0.02000
+
+token_f1_mean:
+  matched = 0.09736
+  no_message = 0.06618
+  zero = 0.09462
+  shuffled_row = 0.09646
+  agent_swap = 0.09342
+```
+
+Held-out receiver-control audit:
+
+```text
+artifact:
+  /data1/luyifei/drla/outputs/p3_dream_receiver_control_audits/
+  dream_receiver_generation_control_audit_v7_heldout800_20260617
+
+status:
+  pass
+  hard_gate_pass = false
+
+hard controls:
+  no_message
+  zero
+  shuffled_row
+
+diagnostic controls:
+  agent_swap
+```
+
+Paired held-out deltas:
+
+```text
+matched - no_message:
+  primary delta = +0.00125, CI = [-0.00750, +0.01000]
+  wins / ties / losses = 7 / 787 / 6
+  token-F1 delta = +0.03117, CI = [+0.01848, +0.04353]
+
+matched - zero:
+  primary delta = -0.00375, CI = [-0.01000, +0.00125]
+  wins / ties / losses = 1 / 795 / 4
+  token-F1 delta = +0.00274, CI = [-0.00645, +0.01182]
+
+matched - shuffled_row:
+  primary delta = +0.00125, CI = [-0.00375, +0.00750]
+  wins / ties / losses = 3 / 795 / 2
+  token-F1 delta = +0.00090, CI = [-0.00672, +0.00866]
+
+matched - agent_swap:
+  primary delta = +0.00125, CI = [0.00000, +0.00375]
+  wins / ties / losses = 1 / 799 / 0
+  token-F1 delta = +0.00394, CI = [-0.00186, +0.01009]
+```
+
+Interpretation: V7 full200 calibration controls do not transfer to locked
+held-out800. On held-out, matched does not beat the hard controls in primary
+score: it is effectively tied with no-message and shuffled-row and is below
+zero. Token-F1 improves over no-message, but not over zero or shuffled-row.
+Therefore V7 held-out is a negative/blocked D8 result, not a latent
+communication success. The next legitimate step is not to cite D7.13
+calibration as held-out evidence; it is to diagnose why calibration packet
+signal collapses under held-out distribution shift and why zero/receiver prior
+remains competitive.
+
+D7.15 failure-localization audit was added on 2026-06-17 after the V7 held-out
+failure. It tests two hypotheses without training, generation, scoring new
+outputs, or SwanLab: whether held-out packets are visibly out-of-distribution
+at the interface level, and whether V7's calibration full200 gain is actually
+concentrated in its training split.
+
+```text
+interface audit script:
+  /data1/luyifei/drla/drla/scripts/
+  p3_audit_dream_receiver_interface_distribution.py
+
+split-generalization audit script:
+  /data1/luyifei/drla/drla/scripts/
+  p3_audit_dream_receiver_split_generalization.py
+
+calibration interface audit:
+  /data1/luyifei/drla/outputs/p3_dream_receiver_interface_audits/
+  dream_receiver_interface_audit_v7_calibration_full200_20260617
+
+held-out interface audit:
+  /data1/luyifei/drla/outputs/p3_dream_receiver_interface_audits/
+  dream_receiver_interface_audit_v7_heldout800_20260617
+
+split-generalization audit:
+  /data1/luyifei/drla/outputs/p3_dream_receiver_generalization_audits/
+  dream_receiver_v7_calibration_split_generalization_20260617
+
+combined failure-localization artifact:
+  /data1/luyifei/drla/outputs/p3_dream_receiver_generalization_audits/
+  dream_receiver_v7_d714_failure_localization_20260617
+```
+
+Interface comparison:
+
+```text
+packet_mean_cos_to_textmas_last128:
+  calibration full200 = 0.61227
+  held-out800 = 0.62397
+
+packet_mean_cos_to_textmas_prompt:
+  calibration full200 = 0.57396
+  held-out800 = 0.58021
+
+packet_mean_cos_to_no_message_prompt:
+  calibration full200 = 0.37380
+  held-out800 = 0.35674
+
+receiver memory rms:
+  calibration full200 = 2.26080
+  held-out800 = 2.05353
+
+layer delta/hidden norm ratio:
+  layer7  calibration = 0.32080, held-out = 0.33114
+  layer14 calibration = 0.26166, held-out = 0.27403
+  layer21 calibration = 0.26140, held-out = 0.27498
+  layer27 calibration = 0.04937, held-out = 0.05064
+```
+
+Interpretation: held-out packet/TextMAS hidden interface statistics are broadly
+similar to calibration, and held-out injection ratios are not weaker. Layer27
+injection remains tiny in both splits, but the held-out failure is not explained
+by an obvious raw packet/TextMAS distribution mismatch.
+
+V7 calibration full200 split-generalization audit:
+
+```text
+split sizes:
+  train = 160
+  valid = 20
+  test = 20
+
+train primary:
+  matched = 0.24375
+  no_message = 0.03125
+  zero = 0.10000
+  shuffled_row = 0.18750
+  agent_swap = 0.23750
+  hard_gate_pass = true
+
+valid primary:
+  matched = 0.00000
+  no_message = 0.00000
+  zero = 0.00000
+  shuffled_row = 0.00000
+  agent_swap = 0.00000
+  hard_gate_pass = false
+
+test primary:
+  matched = 0.20000
+  no_message = 0.10000
+  zero = 0.15000
+  shuffled_row = 0.30000
+  agent_swap = 0.20000
+  hard_gate_pass = false
+```
+
+Interpretation: D7.13 V7 full200 looked promising because the aggregate was
+dominated by the 160-row training split. Nontrain splits do not pass: valid is
+all zero, and test has shuffled_row above matched. This reframes D7.14 as a
+generalization/selection failure rather than a missing-substrate or obvious
+held-out hidden-distribution failure. Next receiver work must be selected by
+nontrain calibration or a fresh non-heldout split before any locked held-out
+run. Do not use held-out800 for tuning this branch.
+
+D7.16 compact selected-suffix tensor substrate was added on 2026-06-17 to fix
+the full `suffix_tensor` storage bottleneck before training any new receiver.
+This is local-only trace/packet construction, not a training result and not a
+LatentMAS success claim. The collector now supports
+`--hidden-capture-mode selected_suffix_tensor`, which keeps per-step summaries
+but writes only the D5-policy-selected evidence-agent suffix tensor for each
+Dream call. This preserves the actual online tensor consumed by packet builders
+without storing every denoising step's full suffix tensor.
+
+Validation artifacts:
+
+```text
+direct smoke trace:
+  /data1/luyifei/drla/outputs/p3_dream_traces/
+  musique_calibration_trace_selected_suffix_tensor_smoke1_20260617
+
+queue smoke merged trace:
+  /data1/luyifei/drla/outputs/p3_dream_traces/
+  musique_calibration_trace_selected_suffix_tensor_queue_smoke1_merged_20260617
+
+queue smoke packets:
+  /data1/luyifei/drla/outputs/p3_dream_latent_packets/
+  dream_textmas_selected_suffix_tensor_queue_smoke1_packets_20260617
+
+validdiag50 selected trace queue:
+  /data1/luyifei/drla/outputs/p3_dream_traces/
+  musique_validdiag50_trace_textmas_matched_selected_suffix_tensor_20260617_queue
+
+validdiag50 selected trace merged:
+  /data1/luyifei/drla/outputs/p3_dream_traces/
+  musique_validdiag50_trace_textmas_matched_selected_suffix_tensor_merged_20260617
+
+validdiag50 selected packets:
+  /data1/luyifei/drla/outputs/p3_dream_latent_packets/
+  dream_textmas_validdiag50_selected_suffix_tensor_packets_20260617
+```
+
+validdiag50 packet summary:
+
+```text
+trace rows / samples / calls:
+  50 / 50 / 150
+
+packet groups / packets:
+  50 / 100
+
+packet groups with both agents:
+  50
+
+selected step:
+  min = 4
+  mean = 33.58
+  max = 63
+
+tensor storage:
+  mean selected hidden file size = 919611 bytes
+  total referenced hidden bytes = 91961100
+
+audit:
+  missing refs = 0
+  missing traces = 0
+  forbidden packet key hits = 0
+```
+
+Storage check: the selected validdiag50 shards are about 27M each, while an old
+full suffix tensor 10-row shard was about 1.7G. Therefore future large
+non-heldout packet substrate should use selected-suffix mode by default. Full
+suffix tensor traces remain useful for interface audits but should not be scaled
+without an explicit storage budget.
+
+Split boundary note: validdiag50 is an engineering validation set for compact
+trace/packet construction, not a clean receiver-selection split against
+train2000. A sample-id audit found 3 overlapping samples between train2000 and
+validdiag50, while both have 0 overlap with the locked held-out800 manifest
+`/data1/luyifei/drla/outputs/p2_phase_c_manifests/musique_heldout_manifest_800_seed20260605/manifest.json`.
+If validdiag is used as a nontrain receiver gate, rebuild it disjointly or
+filter the overlapping sample ids first.
+
+The full nonheldout train2000 compact substrate was then collected and merged:
+
+```text
+trace queue:
+  /data1/luyifei/drla/outputs/p3_dream_traces/
+  musique_train2000_trace_textmas_matched_selected_suffix_tensor_20260617_queue
+
+merged trace:
+  /data1/luyifei/drla/outputs/p3_dream_traces/
+  musique_train2000_trace_textmas_matched_selected_suffix_tensor_merged_20260617
+
+packet artifact:
+  /data1/luyifei/drla/outputs/p3_dream_latent_packets/
+  dream_textmas_train2000_selected_suffix_tensor_packets_20260617
+```
+
+train2000 compact substrate summary:
+
+```text
+queue:
+  requested shards = 40
+  completed shards = 40
+  failed shards = 0
+
+merged trace:
+  rows = 2000
+  samples = 2000
+  traces = 6000
+  missing trace ids = 0
+  duplicate row/call ids = 0
+
+packet build:
+  packet groups = 2000
+  packets = 4000
+  packet groups with both agents = 2000
+  missing refs = 0
+  missing traces = 0
+  forbidden packet key hits = 0
+  mean selected step = 35.31025
+  min selected step = 0
+  max selected step = 63
+  total referenced hidden bytes = 3678444000
+```
+
+This artifact is now the main nonheldout receiver-training substrate. It still
+does not prove latent communication: it only gives a larger decoder-free packet
+input set. Any receiver trained on it must be evaluated with checkpoint-defined
+valid/test splits and hard controls before held-out can be touched.
+
+D7.16 train2000 receiver training was then run on top of the compact packet
+substrate. It initializes from the earlier V7 V4-initialized zeroshuf receiver,
+keeps Dream frozen, trains only the packet memory encoder and layer conditioners,
+uses CUDA/GPU plus SwanLab cloud, and logs local `metrics.jsonl`,
+`best_checkpoint.pt`, and `last_checkpoint.pt`. This is a training result, but
+not a LatentMAS success claim unless generation controls pass.
+
+Training artifact:
+
+```text
+output_dir:
+  /data1/luyifei/drla/outputs/p3_dream_layer_receivers/
+  dream_layer_receiver_d716_train2000_v7init_zeroshuf_seed20260617
+
+SwanLab:
+  https://swanlab.cn/@Lyfff/drla-mvp/runs/7134z0gui6w8jek33rdt0
+
+best checkpoint:
+  /data1/luyifei/drla/outputs/p3_dream_layer_receivers/
+  dream_layer_receiver_d716_train2000_v7init_zeroshuf_seed20260617/
+  best_checkpoint.pt
+
+last checkpoint:
+  /data1/luyifei/drla/outputs/p3_dream_layer_receivers/
+  dream_layer_receiver_d716_train2000_v7init_zeroshuf_seed20260617/
+  last_checkpoint.pt
+```
+
+Training configuration:
+
+```text
+init_checkpoint:
+  /data1/luyifei/drla/outputs/p3_dream_layer_receivers/
+  dream_layer_receiver_v7_v4init_zeroshuf_textmas_matched200_seed20260607_20260607/
+  best_checkpoint.pt
+
+split:
+  train / valid / test = 1600 / 200 / 200
+
+valid_interval:
+  10
+
+max_train_steps:
+  600
+
+learning_rate:
+  3e-5
+
+corruption_types:
+  zero, shuffled_row
+
+corruption_loss_weight / margin:
+  0.5 / 0.5
+```
+
+Best checkpoint loss-level metrics:
+
+```text
+best_step:
+  600
+
+valid:
+  matched_ce = 2.5632873698417096
+  zero_ce_margin = 2.8676398239191623
+  shuffled_row_ce_margin = 0.03806205857545164
+  agent_swap_ce_margin = 0.0025234181527049593
+  token_accuracy = 0.6134504672139883
+
+test:
+  matched_ce = 2.470198732819408
+  zero_ce_margin = 2.879840268287808
+  shuffled_row_ce_margin = 0.03120649160817246
+  agent_swap_ce_margin = -0.005069603230804187
+  token_accuracy = 0.6136382107436656
+```
+
+Interpretation at this level: D7.16 successfully learns the teacher-forcing
+answer-token CE objective and strongly separates zero packets. It weakly
+separates shuffled-row packets and does not learn an ordered agent-role signal.
+This is useful but insufficient, because the real LatentMAS gate is sampled
+Dream generation under hard controls.
+
+D7.16 checkpoint-defined valid generation gate was run local-only:
+
+```text
+run_dir:
+  /data1/luyifei/drla/outputs/p3_dream_layer_receiver_runs/
+  dream_layer_receiver_d716_train2000_v7init_zeroshuf_valid200_20260617
+
+audit_dir:
+  /data1/luyifei/drla/outputs/p3_dream_receiver_control_audits/
+  dream_receiver_generation_control_audit_d716_train2000_valid200_20260617
+
+selection:
+  --split valid
+  max_rows = 200
+
+execution boundary:
+  local-only eval/audit
+  no optimizer/backward/weight update
+  no SwanLab
+  no decoded agent text inserted into solver prompt
+```
+
+Generation metrics:
+
+```text
+no_message:
+  primary = 0.055
+  exact = 0.025
+  token_f1 = 0.08172222222222222
+
+matched:
+  primary = 0.040
+  exact = 0.025
+  token_f1 = 0.10878282828282826
+
+zero:
+  primary = 0.045
+  exact = 0.030
+  token_f1 = 0.10434126984126983
+
+shuffled_row:
+  primary = 0.035
+  exact = 0.025
+  token_f1 = 0.1118247863247863
+
+agent_swap:
+  primary = 0.040
+  exact = 0.025
+  token_f1 = 0.11955205905205903
+```
+
+Paired hard-control audit:
+
+```text
+hard_gate_pass:
+  false
+
+matched - no_message:
+  primary_delta_mean = -0.015
+  primary_delta_ci = [-0.040, 0.005]
+  wins / ties / losses = 1 / 195 / 4
+  token_f1_delta_mean = +0.027060606060606056
+
+matched - zero:
+  primary_delta_mean = -0.005
+  primary_delta_ci = [-0.035, 0.025]
+  wins / ties / losses = 4 / 191 / 5
+  token_f1_delta_mean = +0.004441558441558442
+
+matched - shuffled_row:
+  primary_delta_mean = +0.005
+  primary_delta_ci = [0.000, 0.015]
+  wins / ties / losses = 1 / 199 / 0
+  token_f1_delta_mean = -0.003041958041958042
+
+matched - agent_swap:
+  diagnostic only
+  primary_delta_mean = 0.000
+  token_f1_delta_mean = -0.010769230769230769
+```
+
+Prediction-similarity diagnostic was saved at:
+
+```text
+/data1/luyifei/drla/outputs/p3_dream_receiver_control_audits/
+dream_receiver_generation_control_audit_d716_train2000_valid200_20260617/
+prediction_similarity.json
+```
+
+Key similarity findings:
+
+```text
+matched vs no_message:
+  identical prediction = 72 / 200 = 36.0%
+  identical primary score = 195 / 200 = 97.5%
+  matched-unique correct rows = 1
+  no_message-unique correct rows = 4
+
+matched vs zero:
+  identical prediction = 67 / 200 = 33.5%
+  identical primary score = 191 / 200 = 95.5%
+
+matched vs shuffled_row:
+  identical prediction = 116 / 200 = 58.0%
+  identical primary score = 199 / 200 = 99.5%
+
+matched vs agent_swap:
+  identical prediction = 140 / 200 = 70.0%
+  identical primary score = 200 / 200 = 100.0%
+```
+
+D7.16 conclusion: the larger compact train2000 substrate and V7-initialized
+corruption-aware training improve loss-level packet/control separation, but the
+effect still does not become a stable answer source during sampled denoising
+generation. In particular, matched does not beat no-message or zero on valid
+primary, barely beats shuffled-row on primary, and is indistinguishable from
+agent-swap on correctness. Do not run held-out or D8 from this checkpoint. The
+next receiver experiment should not be "more of the same" teacher-forcing CE;
+it should align the objective and injection mechanism with inference-time Dream
+denoising, for example by supervising packet-conditioned changes along rollout
+states, strengthening online conditioning where generation actually branches,
+and keeping hard controls in the training/evaluation contract.
+
+D7.17 denoising sensitivity audit was added on 2026-06-18 to locate the D7.16
+failure inside the Dream generation loop. This is a local-only audit: it loads
+the D7.16 best checkpoint, uses checkpoint-defined valid rows, compares matched
+packets against controls on the same intermediate denoising state, and writes
+row/step metrics without training or SwanLab. It does not insert decoded agent
+text into the solver prompt. Gold/scorer fields are used only for offline final
+matched-trajectory scoring.
+
+Script:
+
+```text
+/data1/luyifei/drla/drla/scripts/
+p3_audit_dream_receiver_denoising_sensitivity.py
+```
+
+Smoke artifact:
+
+```text
+/data1/luyifei/drla/outputs/p3_dream_receiver_sensitivity_audits/
+dream_receiver_d716_valid2_steps8_smoke_20260618
+```
+
+Valid50 artifact:
+
+```text
+/data1/luyifei/drla/outputs/p3_dream_receiver_sensitivity_audits/
+dream_receiver_d716_valid50_steps64_max128_20260618
+```
+
+Valid50 configuration:
+
+```text
+checkpoint:
+  /data1/luyifei/drla/outputs/p3_dream_layer_receivers/
+  dream_layer_receiver_d716_train2000_v7init_zeroshuf_seed20260617/
+  best_checkpoint.pt
+
+split:
+  checkpoint-defined valid
+
+rows / steps / max_tokens:
+  50 / 64 / 128
+
+step-control records:
+  12800
+
+execution boundary:
+  local-only
+  no optimizer/backward/weight update
+  no SwanLab
+  no decoded agent text inserted into solver prompt
+```
+
+Aggregate sensitivity metrics:
+
+```text
+matched_shared_state:
+  primary = 0.020
+  exact = 0.020
+  token_f1 = 0.1297979797979798
+
+matched vs no_message:
+  top1_disagree = 0.008185529597103596
+  transfer_top1_disagree = 0.006093749925494194
+  top1_same = 0.9918144636973739
+  transfer_top1_same = 0.9939062500745058
+
+matched vs zero:
+  top1_disagree = 0.008204307057021652
+  transfer_top1_disagree = 0.007031249916180969
+  top1_same = 0.9917956862505526
+  transfer_top1_same = 0.992968750083819
+
+matched vs shuffled_row:
+  top1_disagree = 0.002695536487735808
+  transfer_top1_disagree = 0.0018229165952652693
+  top1_same = 0.9973044545017182
+  transfer_top1_same = 0.9981770834047348
+
+matched vs agent_swap:
+  top1_disagree = 0.0016112422474543564
+  transfer_top1_disagree = 0.0012499999348074197
+  top1_same = 0.9983887483365834
+  transfer_top1_same = 0.9987500000651925
+```
+
+Step-band readout:
+
+```text
+steps 0-15:
+  no_message transfer_disagree = 0.01875
+  zero transfer_disagree = 0.02125
+  shuffled_row transfer_disagree = 0.001875
+  agent_swap transfer_disagree = 0.00000
+
+steps 16-31:
+  no_message transfer_disagree = 0.000625
+  zero transfer_disagree = 0.000625
+  shuffled_row transfer_disagree = 0.00000
+  agent_swap transfer_disagree = 0.00000
+
+steps 32-47:
+  no_message transfer_disagree = 0.00000
+  zero transfer_disagree = 0.00000
+  shuffled_row transfer_disagree = 0.00000
+  agent_swap transfer_disagree = 0.00000
+
+steps 48-63:
+  no_message transfer_disagree = 0.00500
+  zero transfer_disagree = 0.00625
+  shuffled_row transfer_disagree = 0.005417
+  agent_swap transfer_disagree = 0.00500
+```
+
+D7.17 conclusion: D7.16's packet-conditioned receiver rarely changes the token
+that Dream would write at each denoising step. Even zero/no-message controls
+agree with matched on more than 99% of transfer decisions; shuffled-row and
+agent-swap are even closer. This localizes the failure below the final scorer:
+the current receiver can improve teacher-forced answer CE/margins, but its
+online perturbation is not strong or targeted enough to change denoising
+decisions. The next receiver design should directly optimize or guide
+packet-conditioned denoising decisions under hard controls, not merely extend
+the same answer-token CE objective.
+
+D7.18-v1 denoising-aligned receiver was implemented and run on 2026-06-18.
+It keeps the D7.16 frozen-Dream layer-conditioned receiver architecture but
+changes the training state and objective:
+
+```text
+training state:
+  partial-denoising answer states
+  mask ratios = 1.0, 0.75, 0.5, 0.25
+
+positive objective:
+  matched packet CE on masked answer positions
+
+hard-control objective:
+  matched-vs-zero gold-token logit margin
+  matched-vs-shuffled-row gold-token logit margin
+  optional matched-gold-vs-control-top margin
+
+diagnostic boundary:
+  agent_swap remains diagnostic only
+  no decoded agent text in solver prompt
+  gold answers are supervised targets only
+```
+
+Script:
+
+```text
+/data1/luyifei/drla/drla/scripts/
+p3_train_dream_layer_receiver_denoising_aligned.py
+```
+
+Smoke artifacts:
+
+```text
+/data1/luyifei/drla/outputs/p3_dream_layer_receivers/
+dream_layer_receiver_d718_smoke2_denoising_aligned_seed20260618
+
+/data1/luyifei/drla/outputs/p3_dream_layer_receivers/
+dream_layer_receiver_d718_smoke1_deterministic_eval_seed20260618
+```
+
+The first smoke exposed that validation masks must be deterministic for stable
+checkpoint selection; the trainer was patched so evaluation uses deterministic
+partial-mask patterns while training remains randomly scheduled.
+
+D7.18-v1 screen200 training artifact:
+
+```text
+output_dir:
+  /data1/luyifei/drla/outputs/p3_dream_layer_receivers/
+  dream_layer_receiver_d718_screen200_denoising_aligned_seed20260618
+
+SwanLab:
+  https://swanlab.cn/@Lyfff/drla-mvp/runs/5f7ynp5opf6j61cqpbxyy
+
+best checkpoint:
+  /data1/luyifei/drla/outputs/p3_dream_layer_receivers/
+  dream_layer_receiver_d718_screen200_denoising_aligned_seed20260618/
+  best_checkpoint.pt
+
+last checkpoint:
+  /data1/luyifei/drla/outputs/p3_dream_layer_receivers/
+  dream_layer_receiver_d718_screen200_denoising_aligned_seed20260618/
+  last_checkpoint.pt
+```
+
+Training configuration:
+
+```text
+init_checkpoint:
+  D7.16 train2000 best checkpoint
+
+split:
+  train / valid / test = 1600 / 200 / 200
+
+max_train_steps:
+  200
+
+valid_interval:
+  10
+
+learning_rate:
+  3e-5
+
+decision_margin / decision_loss_weight:
+  1.0 / 0.5
+
+control_top_margin / control_top_loss_weight:
+  0.5 / 0.1
+
+corruption_types:
+  zero, shuffled_row
+```
+
+Best checkpoint metrics:
+
+```text
+best_step:
+  200
+
+valid:
+  matched_ce = 1.7278096367617877
+  matched_token_accuracy = 0.6994468848593534
+  hard_gold_margin_mean = 1.4301884883403544
+  zero_gold_margin = 2.8303708081692456
+  shuffled_row_gold_margin = 0.03000616851146333
+  decision_loss = 0.570474853515625
+  control_top_loss = 1.3755816650390624
+  selection_metric = -1.6408261639043147
+
+test:
+  matched_ce = 1.6313846607612956
+  matched_token_accuracy = 0.7104631761461496
+  hard_gold_margin_mean = 1.4699135826078418
+  zero_gold_margin = 2.898188375737518
+  shuffled_row_gold_margin = 0.041638789478165565
+  decision_loss = 0.5647116088867188
+  control_top_loss = 1.2701894378662109
+  selection_metric = -1.5380326717021715
+```
+
+Training interpretation: D7.18-v1 validates the partial-denoising objective in
+one sense: matched CE and zero-packet margins improve substantially compared
+with D7.16. However, row-specific shuffled-row margin barely moves. The average
+hard margin is dominated by zero separation, so the objective is still not
+forcing enough sample-specific packet binding.
+
+D7.18-v1 denoising sensitivity audit:
+
+```text
+artifact:
+  /data1/luyifei/drla/outputs/p3_dream_receiver_sensitivity_audits/
+  dream_receiver_d718_screen200_valid50_steps64_max128_20260618
+
+scope:
+  local-only
+  checkpoint-defined valid50
+  64 denoising steps
+  128 generated-token budget
+  12800 step-control records
+```
+
+Sensitivity metrics:
+
+```text
+matched_shared_state:
+  primary = 0.100
+  exact = 0.040
+  token_f1 = 0.21272168284789644
+
+matched vs no_message:
+  top1_disagree = 0.01940115470002638
+  transfer_top1_disagree = 0.010885416604578495
+
+matched vs zero:
+  top1_disagree = 0.01982994086603867
+  transfer_top1_disagree = 0.0054687499441206456
+
+matched vs shuffled_row:
+  top1_disagree = 0.004630239804100711
+  transfer_top1_disagree = 0.001302083283662796
+
+matched vs agent_swap:
+  top1_disagree = 0.0019041202749940566
+  transfer_top1_disagree = 0.0009374999534338713
+```
+
+Sensitivity interpretation: D7.18-v1 increases no-message disagreement relative
+to D7.17 (`0.00609 -> 0.01089` on transfer decisions), but shuffled-row
+disagreement does not improve (`0.00182 -> 0.00130`). This confirms the training
+readout: the new objective makes the receiver more sensitive to packet presence,
+but not more sensitive to which row's packet is present.
+
+D7.18-v1 valid50 generation controls:
+
+```text
+run:
+  /data1/luyifei/drla/outputs/p3_dream_layer_receiver_runs/
+  dream_layer_receiver_d718_screen200_valid50_20260618
+
+audit:
+  /data1/luyifei/drla/outputs/p3_dream_receiver_control_audits/
+  dream_receiver_generation_control_audit_d718_screen200_valid50_20260618
+```
+
+Generation metrics:
+
+```text
+no_message:
+  primary = 0.08
+  exact = 0.02
+  token_f1 = 0.116984126984127
+
+matched:
+  primary = 0.12
+  exact = 0.06
+  token_f1 = 0.23272168284789643
+
+zero:
+  primary = 0.12
+  exact = 0.04
+  token_f1 = 0.16306459948320412
+
+shuffled_row:
+  primary = 0.10
+  exact = 0.04
+  token_f1 = 0.212
+
+agent_swap:
+  primary = 0.08
+  exact = 0.02
+  token_f1 = 0.19570716510903427
+```
+
+Paired audit:
+
+```text
+hard_gate_pass:
+  false
+
+matched - no_message:
+  primary_delta_mean = +0.04
+  primary_delta_ci = [0.00, +0.10]
+  wins / ties / losses = 2 / 48 / 0
+
+matched - zero:
+  primary_delta_mean = 0.00
+  primary_delta_ci = [-0.08, +0.08]
+  wins / ties / losses = 2 / 46 / 2
+
+matched - shuffled_row:
+  primary_delta_mean = +0.02
+  primary_delta_ci = [0.00, +0.06]
+  wins / ties / losses = 1 / 49 / 0
+```
+
+D7.18-v1 conclusion: the partial-denoising/decision-margin repair is directionally
+useful, but it is not a valid receiver. It improves matched generation over
+no-message and slightly over shuffled-row on valid50, but it ties zero on primary
+and does not materially increase shuffled-row transfer-token disagreement.
+Therefore do not run held-out or D8 from D7.18-v1. The next repair should make
+row-specific shuffled-row separation a first-class objective, for example by
+up-weighting shuffled-row margins separately from zero, adding row-contrastive
+packet binding, or using retrieval-style packet-to-answer/state alignment before
+or alongside denoising decision losses.
+
+D7.19 row-binding weighted denoising-aligned receiver was implemented and run on
+2026-06-18. It keeps the D7.18 partial-denoising training state, but changes the
+objective and checkpoint selection so shuffled-row / row-specific binding is no
+longer averaged away by the easier zero-packet separation.
+
+Code changes:
+
+```text
+script:
+  /data1/luyifei/drla/drla/scripts/
+  p3_train_dream_layer_receiver_denoising_aligned.py
+
+new training controls:
+  --decision-control-weights
+  --top-control-weights
+  --selection-mode row_binding
+
+extra guard:
+  non-empty train/valid/test split check
+```
+
+D7.19 screen200 training artifact:
+
+```text
+output_dir:
+  /data1/luyifei/drla/outputs/p3_dream_layer_receivers/
+  dream_layer_receiver_d719_screen200_row_binding_seed20260618
+
+SwanLab:
+  https://swanlab.cn/@Lyfff/drla-mvp/runs/ub06nr5p8ddq3p2fgdenw
+
+best checkpoint:
+  /data1/luyifei/drla/outputs/p3_dream_layer_receivers/
+  dream_layer_receiver_d719_screen200_row_binding_seed20260618/
+  best_checkpoint.pt
+
+last checkpoint:
+  /data1/luyifei/drla/outputs/p3_dream_layer_receivers/
+  dream_layer_receiver_d719_screen200_row_binding_seed20260618/
+  last_checkpoint.pt
+```
+
+Training configuration:
+
+```text
+init_checkpoint:
+  D7.18-v1 best checkpoint
+
+split:
+  train / valid / test = 1600 / 200 / 200
+
+max_train_steps:
+  200
+
+valid_interval:
+  10
+
+learning_rate:
+  2e-5
+
+decision_margin / decision_loss_weight:
+  1.0 / 1.0
+
+control_top_margin / control_top_loss_weight:
+  0.5 / 0.2
+
+decision_control_weights:
+  zero = 0.15
+  shuffled_row = 4.0
+
+top_control_weights:
+  zero = 0.05
+  shuffled_row = 2.0
+
+selection_mode:
+  row_binding
+```
+
+Best checkpoint metrics:
+
+```text
+best_step:
+  200
+
+valid:
+  matched_ce = 1.7381578401603024
+  matched_token_accuracy = 0.6977861981652677
+  zero_gold_margin = 2.977695965440944
+  shuffled_row_gold_margin = 0.06667653079697629
+  shuffled_row_top_margin = -1.063897340404801
+  decision_loss = 0.9688546752929688
+  control_top_loss = 1.6566759109497071
+  selection_metric = -1.8808453747144656
+
+test:
+  matched_ce = 1.6379975606159973
+  matched_token_accuracy = 0.7087592168152332
+  zero_gold_margin = 2.9921453844895587
+  shuffled_row_gold_margin = 0.06340354728978127
+  shuffled_row_top_margin = -0.9445282942068297
+  decision_loss = 0.9919075441360473
+  control_top_loss = 1.5656114578247071
+  selection_metric = -1.7558944928309617
+```
+
+Training interpretation: D7.19 does move the loss-level row-binding readout in
+the intended direction. Valid shuffled-row gold margin rises from D7.18-v1's
+`0.0300` to `0.0667`, and test shuffled-row gold margin rises from `0.0416` to
+`0.0634`. However, the absolute margin is still tiny and shuffled-row top margin
+remains strongly negative. This means the matched packet often improves the
+gold-token logit only slightly, while the control top token remains competitive.
+
+D7.19 denoising sensitivity audit:
+
+```text
+artifact:
+  /data1/luyifei/drla/outputs/p3_dream_receiver_sensitivity_audits/
+  dream_receiver_d719_screen200_valid50_steps64_max128_20260618
+
+scope:
+  local-only
+  checkpoint-defined valid50
+  64 denoising steps
+  128 generated-token budget
+  12800 step-control records
+```
+
+Sensitivity metrics:
+
+```text
+matched_shared_state:
+  primary = 0.100
+  exact = 0.040
+  token_f1 = 0.19994871794871794
+
+matched vs no_message:
+  top1_disagree = 0.023465993327263276
+  transfer_top1_disagree = 0.010833333283662795
+
+matched vs zero:
+  top1_disagree = 0.018538119594741147
+  transfer_top1_disagree = 0.0064062499441206455
+
+matched vs shuffled_row:
+  top1_disagree = 0.004466023079294246
+  transfer_top1_disagree = 0.0016666666232049464
+
+matched vs agent_swap:
+  top1_disagree = 0.0033019181326380933
+  transfer_top1_disagree = 0.0008333333022892475
+```
+
+Sensitivity interpretation: compared with D7.18-v1, D7.19 slightly improves
+matched-vs-shuffled-row transfer disagreement (`0.00130 -> 0.00167`) and
+matched-vs-zero transfer disagreement (`0.00547 -> 0.00641`), but no-message is
+essentially unchanged (`0.01089 -> 0.01083`). The row-binding loss therefore
+creates a small logit/decision perturbation but still does not produce a strong
+row-specific packet effect during sampled Dream denoising.
+
+D7.19 valid50 generation controls:
+
+```text
+run:
+  /data1/luyifei/drla/outputs/p3_dream_layer_receiver_runs/
+  dream_layer_receiver_d719_screen200_valid50_20260618
+
+audit:
+  /data1/luyifei/drla/outputs/p3_dream_receiver_control_audits/
+  dream_receiver_generation_control_audit_d719_screen200_valid50_20260618
+```
+
+Generation metrics:
+
+```text
+no_message:
+  primary = 0.08
+  exact = 0.02
+  token_f1 = 0.116984126984127
+
+matched:
+  primary = 0.10
+  exact = 0.04
+  token_f1 = 0.19994871794871794
+
+zero:
+  primary = 0.12
+  exact = 0.04
+  token_f1 = 0.16015873015873017
+
+shuffled_row:
+  primary = 0.10
+  exact = 0.04
+  token_f1 = 0.1986153846153846
+
+agent_swap:
+  primary = 0.10
+  exact = 0.04
+  token_f1 = 0.18636108908273855
+```
+
+Paired audit:
+
+```text
+hard_gate_pass:
+  false
+
+matched - no_message:
+  primary_delta_mean = +0.02
+  primary_delta_ci = [0.00, +0.06]
+  wins / ties / losses = 1 / 49 / 0
+
+matched - zero:
+  primary_delta_mean = -0.02
+  primary_delta_ci = [-0.08, +0.04]
+  wins / ties / losses = 1 / 47 / 2
+
+matched - shuffled_row:
+  primary_delta_mean = 0.00
+  primary_delta_ci = [0.00, 0.00]
+  wins / ties / losses = 0 / 50 / 0
+
+matched - agent_swap:
+  primary_delta_mean = 0.00
+  primary_delta_ci = [0.00, 0.00]
+  wins / ties / losses = 0 / 50 / 0
+```
+
+D7.19 conclusion: row-binding weighted loss is a useful diagnostic but not a
+valid receiver. It improves the teacher-forced shuffled-row margin and creates a
+small sensitivity uptick, yet generation remains non-packet-specific: matched is
+identical to shuffled-row on primary for all 50 rows and is below zero-packet
+primary. Do not run held-out or D8 from D7.19. The next receiver attempt should
+not merely increase the same CE/margin weights or steps; it should first revisit
+row-identity architecture, stronger fusion/injection, trajectory-level
+packet-conditioned guidance, or a receiver objective whose nontrain gate is
+directly tied to matched-vs-shuffled generation differences.
+
+For new experiments, P3 Dream-DLM supersedes the old P2 CoLA route. P2 entries
+below remain historical evidence and protocol-boundary references.
 P2 packet v1 substrate completed.
 P2-A packet v2 rebuild completed.
 P2-B distribution audit completed.

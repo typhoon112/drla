@@ -1,0 +1,10 @@
+{
+  "hidden_refs_are_repo_relative": true,
+  "num_manifest_samples": 1,
+  "num_online_rows": 1,
+  "num_packet_groups": 1,
+  "num_packets": 2,
+  "sample_id": "p2c_musique_calibration_2hop__38555_442521",
+  "source_note": "D6 selected-suffix smoke packet; retained only as a D7 interface smoke fixture.",
+  "status": "pass"
+}

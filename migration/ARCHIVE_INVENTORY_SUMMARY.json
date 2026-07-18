@@ -1,0 +1,69 @@
+{
+  "heavy_post_d55_suffixes": [
+    ".bin",
+    ".ckpt",
+    ".npy",
+    ".npz",
+    ".pt",
+    ".pth",
+    ".safetensors"
+  ],
+  "included_apparent_bytes_excluding_this_summary": 182825455301,
+  "included_by_class": {
+    "archive_metadata": {
+      "apparent_bytes": 15065189,
+      "file_count": 1
+    },
+    "conda_environment": {
+      "apparent_bytes": 8156689256,
+      "file_count": 47135
+    },
+    "historical_and_mixed_outputs": {
+      "apparent_bytes": 113450485685,
+      "file_count": 39634
+    },
+    "historical_archive": {
+      "apparent_bytes": 8773184601,
+      "file_count": 10816
+    },
+    "local_cache": {
+      "apparent_bytes": 1371695013,
+      "file_count": 337
+    },
+    "model_weights": {
+      "apparent_bytes": 50138052174,
+      "file_count": 139
+    },
+    "p3_pre_d55_reproducibility": {
+      "apparent_bytes": 242949163,
+      "file_count": 1507
+    },
+    "post_d55_logs_and_evidence": {
+      "apparent_bytes": 389082302,
+      "file_count": 1364
+    },
+    "post_d55_smoke": {
+      "apparent_bytes": 945190,
+      "file_count": 7
+    },
+    "post_d55_v7_runnable_checkpoint": {
+      "apparent_bytes": 263555606,
+      "file_count": 4
+    },
+    "repository_code_docs_git": {
+      "apparent_bytes": 38817616,
+      "file_count": 2814
+    }
+  },
+  "included_file_count": 103757,
+  "omitted_by_class": {
+    "post_d55_heavy_omitted": {
+      "apparent_bytes": 192308616680,
+      "file_count": 198216
+    }
+  },
+  "policy_boundary": "preserve all historical/CoLA/P0-P2 and P3 through D5.5; compact P3 after D5.5",
+  "repo_root_at_build_time": "/data1/luyifei/drla",
+  "retained_v7_directory": "outputs/p3_dream_layer_receivers/dream_layer_receiver_v7_v4init_zeroshuf_textmas_matched200_seed20260607_20260607",
+  "status": "pass"
+}

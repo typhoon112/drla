@@ -1,0 +1,92 @@
+{
+  "archive_smoke_subset": true,
+  "created_at_utc": "2026-06-01T00:00:00Z",
+  "families": [
+    "evidence_split_qa"
+  ],
+  "manifest_version": "p2_phase_c_manifest_v0",
+  "protocol_version": "p2c_musique_calibration_draft_v0_seed20260601",
+  "samples": [
+    {
+      "agent_views": [
+        {
+          "agent_id": "agent_a",
+          "allowed_output_contract": "Summarize only the useful information in this private evidence shard. Do not guess the final answer unless the shard itself proves it; do not include gold labels or scorer information.",
+          "forbidden_fields": [
+            "gold_answer",
+            "scorer_output",
+            "full_evidence"
+          ],
+          "private_observation": "[1] (support) Fiction-absolute: The term was coined and defined by journalist Tom Wolfe in his 2006 Jefferson Lecture for the National Endowment for the Humanities. Wolfe defined the term as the propaganda that a tribe or social group employs to explain why that group is the best of all groups and its people the best people. The term itself indicates that it is absolutist in that it defines in stark terms why members should prefer that tribe, and necessarily fictional because it is propaganda, although it might have some basis in truth. The fiction-absolute is essentially a tribe's core propaganda. It can lead to intolerance and forms of collective action.\n[2] (distractor) Bonfire toffee: Bonfire toffee (also known as treacle toffee, Plot toffee, or Tom Trot) is a hard, brittle toffee associated with Halloween and Guy Fawkes Night (also known as \"Bonfire Night\") in the United Kingdom. The toffee tastes very strongly of molasses (black treacle), and cheap versions can be quite bitter. In Scotland, the treat is known as claggum, with less sweet versions known as clack. In Wales, it is known as loshin du. (losin du or taffi triog). The flavour is similar to that of butterscotch, although it is a toffee and never a viscous liquid.\n[3] (distractor) Nita Engle: Nita Engle (born 1926, Michigan) is an American watercolor painter. She has worked as an art director and magazine illustrator and exhibited in and out of the United States. Engle has received several awards, including an honorary doctorate from Northern Michigan University. A documentary has been made about her entitled \"Wilderness Palette - Nita Engle in Michigan\" and she wrote the book \"How to Make a Watercolor Paint Itself: Experimental Techniques for Achieving Realistic Effects\".",
+          "role": "evidence_holder_a"
+        },
+        {
+          "agent_id": "agent_b",
+          "allowed_output_contract": "Summarize only the useful information in this private evidence shard. Do not guess the final answer unless the shard itself proves it; do not include gold labels or scorer information.",
+          "forbidden_fields": [
+            "gold_answer",
+            "scorer_output",
+            "full_evidence"
+          ],
+          "private_observation": "[1] (support) The Bronx: By contrast, Tom Wolfe's Bonfire of the Vanities (1987) portrays a wealthy, white protagonist, Sherman McCoy, getting lost off the Major Deegan Expressway in the South Bronx and having an altercation with locals. A substantial piece of the last part of the book is set in the resulting riotous trial at the Bronx County Courthouse. However, times change, and in 2007, the New York Times reported that \"the Bronx neighborhoods near the site of Sherman's accident are now dotted with townhouses and apartments.\" In the same article, the Reverend Al Sharpton (whose fictional analogue in the novel is \"Reverend Bacon\") asserts that \"twenty years later, the cynicism of The Bonfire of the Vanities is as out of style as Tom Wolfe's wardrobe.\"\n[2] (distractor) A Question of Taste: A Question of Taste (, also known as \"A Matter of Taste\" in the United States) is a 2000 French film directed by Bernard Rapp. Rapp and Gilles Taurand wrote the screenplay which was based on the book \"Affaires de goût\" by Philippe Balland. The film received 5 César Award nominations, including the nomination for Best Film.\n[3] (distractor) PEN/Faulkner Award for Fiction: The PEN/Faulkner Award for Fiction is awarded annually by the PEN/Faulkner Foundation to the authors of the year's best works of fiction by living American citizens. The winner receives US $15,000 and each of four runners-up receives US $5000. Finalists read from their works at the presentation ceremony in the Great Hall of the Folger Shakespeare Library in Washington, D.C.. The organization claims it to be \"the largest peer-juried award in the country.\" The award was first given in 1981.",
+          "role": "evidence_holder_b"
+        }
+      ],
+      "baselines_required": [
+        "single_q_only",
+        "single_full_info",
+        "textmas_matched",
+        "textmas_no_message",
+        "textmas_shuffled_message",
+        "textmas_wrong_evidence_or_wrong_shard",
+        "textmas_compressed_state"
+      ],
+      "family": "evidence_split_qa",
+      "leakage_audit": {
+        "full_evidence_available_to_split_agent": false,
+        "gold_in_online_prompt": false,
+        "heldout_used_for_prompt_repair": false,
+        "notes": "Gold/scorer/full evidence are offline-only. Split agents receive complementary private evidence shards.",
+        "scorer_output_in_online_prompt": false
+      },
+      "metadata": {
+        "agent_a_support_count": 1,
+        "agent_b_support_count": 1,
+        "distractor_count": 4,
+        "full_info_observation": "[1] (support) Fiction-absolute: The term was coined and defined by journalist Tom Wolfe in his 2006 Jefferson Lecture for the National Endowment for the Humanities. Wolfe defined the term as the propaganda that a tribe or social group employs to explain why that group is the best of all groups and its people the best people. The term itself indicates that it is absolutist in that it defines in stark terms why members should prefer that tribe, and necessarily fictional because it is propaganda, although it might have some basis in truth. The fiction-absolute is essentially a tribe's core propaganda. It can lead to intolerance and forms of collective action.\n[2] (support) The Bronx: By contrast, Tom Wolfe's Bonfire of the Vanities (1987) portrays a wealthy, white protagonist, Sherman McCoy, getting lost off the Major Deegan Expressway in the South Bronx and having an altercation with locals. A substantial piece of the last part of the book is set in the resulting riotous trial at the Bronx County Courthouse. However, times change, and in 2007, the New York Times reported that \"the Bronx neighborhoods near the site of Sherman's accident are now dotted with townhouses and apartments.\" In the same article, the Reverend Al Sharpton (whose fictional analogue in the novel is \"Reverend Bacon\") asserts that \"twenty years later, the cynicism of The Bonfire of the Vanities is as out of style as Tom Wolfe's wardrobe.\"\n[3] (distractor) Bonfire toffee: Bonfire toffee (also known as treacle toffee, Plot toffee, or Tom Trot) is a hard, brittle toffee associated with Halloween and Guy Fawkes Night (also known as \"Bonfire Night\") in the United Kingdom. The toffee tastes very strongly of molasses (black treacle), and cheap versions can be quite bitter. In Scotland, the treat is known as claggum, with less sweet versions known as clack. In Wales, it is known as loshin du. (losin du or taffi triog). The flavour is similar to that of butterscotch, although it is a toffee and never a viscous liquid.\n[4] (distractor) A Question of Taste: A Question of Taste (, also known as \"A Matter of Taste\" in the United States) is a 2000 French film directed by Bernard Rapp. Rapp and Gilles Taurand wrote the screenplay which was based on the book \"Affaires de goût\" by Philippe Balland. The film received 5 César Award nominations, including the nomination for Best Film.\n[5] (distractor) Nita Engle: Nita Engle (born 1926, Michigan) is an American watercolor painter. She has worked as an art director and magazine illustrator and exhibited in and out of the United States. Engle has received several awards, including an honorary doctorate from Northern Michigan University. A documentary has been made about her entitled \"Wilderness Palette - Nita Engle in Michigan\" and she wrote the book \"How to Make a Watercolor Paint Itself: Experimental Techniques for Achieving Realistic Effects\".\n[6] (distractor) PEN/Faulkner Award for Fiction: The PEN/Faulkner Award for Fiction is awarded annually by the PEN/Faulkner Foundation to the authors of the year's best works of fiction by living American citizens. The winner receives US $15,000 and each of four runners-up receives US $5000. Finalists read from their works at the presentation ceremony in the Great Hall of the Folger Shakespeare Library in Washington, D.C.. The organization claims it to be \"the largest peer-juried award in the country.\" The award was first given in 1981.",
+        "is_calibration_draft": true,
+        "license": "CC BY 4.0 per official MuSiQue audit; mirror metadata still requires confirmation",
+        "raw_index": 0,
+        "raw_record_sha256": "40e7525289b171c731e13a7a0ac612d4d81d4fee3e5965e77b6aae5ee9b0ba17",
+        "source_fields": [
+          "id",
+          "question",
+          "answer",
+          "answer_aliases",
+          "paragraphs",
+          "paragraphs.is_supporting",
+          "question_decomposition.paragraph_support_idx"
+        ],
+        "source_type": "musique",
+        "support_count": 2,
+        "use_for_model_eval": false
+      },
+      "public_context": "Evidence is split across agents. Each agent must report only the useful information from its private shard; the final solver must combine the messages to answer.",
+      "question": "What award did the author of Bonfire of the Vanities receive?",
+      "sample_id": "p2c_musique_calibration_2hop__38555_442521",
+      "scoring": {
+        "gold_answer": "Jefferson Lecture",
+        "type": "normalized_f1"
+      },
+      "source": {
+        "name": "bdsaglam/musique",
+        "source_sample_id": "2hop__38555_442521",
+        "url": "https://datasets-server.huggingface.co/rows?dataset=bdsaglam%2Fmusique&config=answerable&split=train",
+        "version": "answerable_train_seeded_blocks_300_seed20260601"
+      },
+      "split": "calibration",
+      "task_name": "p2c_musique_evidence_split_qa_calibration_draft"
+    }
+  ],
+  "split_seed": 20260601
+}

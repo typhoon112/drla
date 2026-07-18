@@ -10,14 +10,16 @@
 |---|---|---|---|
 | `/data1/luyifei/drla/docs/DOCS_INDEX.md` | 当前文档导航 | 当前入口、归档、历史设计和工程运行文档的唯一导航 | 不确定该读哪份文档时 |
 | `/data1/luyifei/drla/AGENT.md` | 当前 agent 约束 | 语言、环境、实验硬约束、当前主线边界 | 每次新会话或准备执行实验/改代码前 |
-| `/data1/luyifei/drla/docs/current/CURRENT_EXPERIMENT_STATUS.md` | 当前状态快照 | P1/P2 当前快照、artifact 指针、下一步 | 需要确认当前阶段和最近结果时 |
-| `/data1/luyifei/drla/docs/current/P2_Locked_Complete_Execution_Scheme_2026-06-01.md` | 当前最高优先级 P2 方案 | post-Family1 后锁定的完整执行顺序：Phase C true MAS validation -> Phase A CoLA adaptation -> Phase E CoLA TextMAS vs LatentMAS；同时锁定 benchmark/agent baseline 更换、CoLA 权重边界、Agent A->B 数据流和禁止事项 | 准备继续任何 P2 实验、下载/构建新 benchmark、训练 adapter/fuser 或写主表前 |
+| `/data1/luyifei/drla/docs/current/CURRENT_EXPERIMENT_STATUS.md` | 当前状态快照 | P3 Dream 当前阶段、artifact 指针、D2 gate 结果和下一步；P1/P2 只作归档背景 | 需要确认当前阶段和最近结果时 |
+| `/data1/luyifei/drla/docs/current/P3_Dream_DLM_Latent_MAS_Experiment_Design_2026-06-06.md` | 当前 P3 Dream 实验设计 | Dream-v0-Instruct-7B 同构 DLM substrate、MuSiQue evidence-split、P0/P1 迁移和 LatentMAS 对照设计 | 准备 Dream 系列 multi-agent latent communication 实验前 |
+| `/data1/luyifei/drla/docs/current/P3_Dream_DLM_Latent_MAS_Implementation_Plan_2026-06-06.md` | 当前 P3 Dream 实施计划 | D0-D8 执行阶段、artifact 命名、SwanLab/本地边界、gate 和验收标准 | 开始下载 Dream、写脚本、跑 gate、训练判别器或 receiver 前 |
+| `/data1/luyifei/drla/docs/current/P2_Locked_Complete_Execution_Scheme_2026-06-01.md` | P2/CoLA 历史锁定方案 | post-Family1 后的 CoLA 路线锁定记录；当前新实验已转向 P3 Dream-DLM，同类约束只作为边界参考 | 追溯 CoLA P2 为什么停止、或复用 receiver-only / gate / 防泄漏规则时 |
 | `/data1/luyifei/drla/docs/current/P2_Latent_MAS_Communication_Implementation_Plan_2026-05-29.md` | P2 substrate/method canonical | same-substrate agent-agent latent communication 的实施方案；执行顺序以 locked scheme 为准 | 设计或实现 P2 packet、audit、receiver、sequential communication 时 |
-| `/data1/luyifei/drla/docs/current/P2_Benchmark_and_Agent_Baseline_Redesign_2026-06-01.md` | 当前 P2 路线修订 | benchmark 准入、role-conditioned MAS baseline、CoLA 权重能力 gate、fuser 触发条件 | 设计或引用任何 P2 text-vs-latent / MAS 主实验前 |
+| `/data1/luyifei/drla/docs/current/P2_Benchmark_and_Agent_Baseline_Redesign_2026-06-01.md` | 历史 P2 路线修订 | benchmark 准入、role-conditioned MAS baseline、CoLA 权重能力 gate、fuser 触发条件 | 追溯 P2 text-vs-latent / MAS 旧实验边界时 |
 | `/data1/luyifei/drla/docs/current/P2_Next_Phase_Execution_Plan_2026-06-01.md` | 历史执行纪律 | P2-D3.1 到 Branch B 前的 gate、禁止事项和 artifact 纪律，下一步表述已被 post-Family1 plan supersede | 追溯 P2-D3.1/旧 Branch B 纪律时 |
-| `/data1/luyifei/drla/docs/current/P2_D1_Capability_Gate_Report_2026-06-01.md` | 当前 P2-D1 gate 报告 | 7 个候选 benchmark 的 full capability gate 结果与 admitted_tasks=[] 结论 | 决定下一步是否能进入 P2 主表前 |
-| `/data1/luyifei/drla/docs/current/P2_D2_Locked_Split_Protocol_2026-06-01.md` | 当前 P2-D2 split 协议 | calibration/held-out split、split_seed、使用边界、防泄漏规则 | 做 prompt/protocol repair 或 held-out gate 前 |
-| `/data1/luyifei/drla/docs/current/P2_D3_Prompt_Repair_Calibration_Report_2026-06-01.md` | 当前 P2-D3 calibration 报告 | prompt variant calibration 结果、GPQA single-only 正例和 Role TextMAS 失败结论 | 继续修 prompt/protocol 前 |
+| `/data1/luyifei/drla/docs/current/P2_D1_Capability_Gate_Report_2026-06-01.md` | 历史 P2-D1 gate 报告 | 7 个候选 benchmark 的 full capability gate 结果与 admitted_tasks=[] 结论 | 追溯 P2 为什么无法进入主表时 |
+| `/data1/luyifei/drla/docs/current/P2_D2_Locked_Split_Protocol_2026-06-01.md` | 历史 P2-D2 split 协议 | calibration/held-out split、split_seed、使用边界、防泄漏规则 | 复用 split/防泄漏纪律时 |
+| `/data1/luyifei/drla/docs/current/P2_D3_Prompt_Repair_Calibration_Report_2026-06-01.md` | 历史 P2-D3 calibration 报告 | prompt variant calibration 结果、GPQA single-only 正例和 Role TextMAS 失败结论 | 追溯 P2 prompt/protocol repair 时 |
 | `/data1/luyifei/drla/docs/current/P2_D4_Branch_Decision_Audit_2026-06-01.md` | 历史分支审计 | substrate adaptation vs benchmark redesign 的旧证据与文献对照，Branch B first 已执行并停止 | 追溯为什么尝试 Branch B Family 1 时 |
 | `/data1/luyifei/drla/docs/current/P2_Branch_B_Execution_Plan_2026-06-01.md` | 历史 Branch B Family 1 方案 | frozen CoLA compatible benchmark redesign、official8-compatible role candidates、gate、主实验边界和 stop conditions | 追溯 Family 1 数据口径与停止条件时 |
 | `/data1/luyifei/drla/docs/current/P2_Branch_B_Calibration_Report_2026-06-01.md` | Branch B calibration 报告 | official8-compatible split、single prompt sweep、MMLU role gate、admitted_tasks=[] | 追溯 Branch B 第一轮为什么未进入 held-out gate 时 |
@@ -28,7 +30,7 @@
 | `/data1/luyifei/drla/docs/current/P2_Phase_C_Data_Source_and_Runner_Design_2026-06-01.md` | Phase C 数据源/runner 设计 | evidence-split QA、distributed-state、code workflow 的数据源排序、preflight/runner/scorer/failure taxonomy、Agent A->B 数据流与泄漏检查 | 选择 Branch C 后开始构建数据和 runner 前 |
 | `/data1/luyifei/drla/docs/current/P2_Phase_C_Data_Source_Field_License_Audit_2026-06-01.md` | Phase C 数据源审计 | MuSiQue、HotpotQA、2WikiMultiHopQA 的字段、license、风险和 dry-inspection 要求 | 写真实数据 builder 或下载数据前 |
 | `/data1/luyifei/drla/docs/current/P2_Benchmark_Redesign_Candidate_Inventory_2026-06-01.md` | Branch B 预备清单 | frozen CoLA compatible benchmark families、准入协议和 stop conditions | 接受 benchmark redesign 分支后准备新 manifest 前 |
-| `/data1/luyifei/drla/docs/current/P2_Channel_Evaluation_Protocol_Audit_2026-05-31.md` | 当前 P2-D 协议审计 | Agent-A -> B 数据流、scorer 边界、legacy 表降级、receiver-only gate | 引用或重跑任何 P2-D text/latent communication 结果前 |
+| `/data1/luyifei/drla/docs/current/P2_Channel_Evaluation_Protocol_Audit_2026-05-31.md` | 历史 P2-D 协议审计 | Agent-A -> B 数据流、scorer 边界、legacy 表降级、receiver-only gate | 复用 receiver-only / scorer 边界规则时 |
 | `/data1/luyifei/drla/drla/scripts/README.md` | 当前脚本索引 | active scripts、训练/eval 边界、P2 脚本规划 | 准备运行或新增脚本时 |
 
 ## P1 / P0 归档与论文证据
